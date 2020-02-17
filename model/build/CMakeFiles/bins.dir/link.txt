@@ -1,0 +1,2 @@
+/usr/bin/ar qc libbins.a  CMakeFiles/bins.dir/src/bins.cpp.o CMakeFiles/bins.dir/src/logger/logger.cpp.o
+/usr/bin/ranlib libbins.a

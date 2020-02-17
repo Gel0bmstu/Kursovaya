@@ -1,0 +1,4 @@
+/media/d/92/kursovaya/model/build/CMakeFiles/edit_cache.dir
+/media/d/92/kursovaya/model/build/CMakeFiles/main.dir
+/media/d/92/kursovaya/model/build/CMakeFiles/rebuild_cache.dir
+/media/d/92/kursovaya/model/build/CMakeFiles/bins.dir
