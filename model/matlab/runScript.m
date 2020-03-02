@@ -5,17 +5,16 @@ clear all;
 % -----------------------------------------------------------
 % Default vals
 % -----------------------------------------------------------
-pi = 3.14;
 
-g = [0, 9.81, 0]; % [m/s^2]
+g = [0, 9.8153, 0]; % [m/s^2]
 Rad = 6378245; % [m]
 h = 200; % [m]
 M = 5.9726e24; % Earth mass [kg]
 U = 7.29e-5; % [rad/s]
-dt = 1/10; % Sampling rate [1/Hz]
+dt = 1/100; % Sampling rate [1/Hz]
 
 simulation_time = 1/dt * 3600; % [sec]
-% simulation_time = 84 * 60; 
+
 % -----------------------------------------------------------
 % Start SINS params
 % -----------------------------------------------------------
@@ -31,13 +30,13 @@ Ax_b = 0;
 Ay_b = 0;
 Az_b = 0;
 
-Ax_b_prev = 0;
-Ay_b_prev = 0;
-Az_b_prev = 0;
+Ax_n = zeros(1, simulation_time);
+Ay_n = zeros(1, simulation_time);
+Az_n = zeros(1, simulation_time);
 
-% Ax_0 = Ax;
-% Ay_0 = Ay;
-% Az_0 = Az;
+Ax_n(1) = 0;
+Ay_n(1) = 0;
+Az_n(1) = 0;
 
 % Vels
 % -----------------------------------------------------------
@@ -47,13 +46,13 @@ Vx_b = 0;
 Vy_b = 0;
 Vz_b = 0;
 
-Vx_n_prev = Vx_b;
-Vy_n_prev = Vy_b;
-Vz_n_prev = Vz_b;
+Vx_n = zeros(1, simulation_time);
+Vy_n = zeros(1, simulation_time);
+Vz_n = zeros(1, simulation_time);
 
-% Vx_0 = Vx;
-% Vy_0 = Vy;
-% Vz_0 = Vz;
+Vx_n(1) = 0;
+Vy_n(1) = 0;
+Vz_n(1) = 0;
 
 % Angular vels
 % -----------------------------------------------------------
@@ -61,13 +60,13 @@ Wx_b = 0;
 Wy_b = 0;
 Wz_b = 0;
 
-Wb = [0 0 0 0];
-Wb_ks1 = [0 0 0; 0 0 0; 0 0 0];
-Wb_ks2 = Wb_ks1;
+Wx_n = zeros(1, simulation_time);
+Wy_n = zeros(1, simulation_time);
+Wz_n = zeros(1, simulation_time);
 
-Wx_prev = 0;
-Wy_prev = 0;
-Wz_prev = 0;
+Wx_n(1) = 0;
+Wy_n(1) = 0;
+Wz_n(1) = 0;
 
 % Angles
 % -----------------------------------------------------------
@@ -76,202 +75,233 @@ Wz_prev = 0;
 Fx_b = 0;
 Fy_b = 0;
 Fz_b = 0;
-%F_b=[0 0 0];
 
-psi = 0;
-teta = 0;
-gamma = 0;
+Fx_n = zeros(1, simulation_time);
+Fy_n = zeros(1, simulation_time);
+Fz_n = zeros(1, simulation_time);
+
+Fx_n(1) = 0;
+Fy_n(1) = 0;
+Fz_n(1) = 0;
+
+psi   = zeros(1, simulation_time);
+teta  = zeros(1, simulation_time);
+gamma = zeros(1, simulation_time);
+
+psi(1) = 0;
+teta(1) = 0;
+gamma(2) = 0;
 
 % Moscow cords
-% fi = 56 / 57.3;
-% la = 38 / 57.3;
-phi = 90 / 57.3;
-la  = 90 / 57.3;
+phi = 56 / 57.3;
+la = 38 / 57.3;
+h   = zeros(1, simulation_time);
+h(1) = 200;
 
 % Rotation quaternions
 % -----------------------------------------------------------
-% P = quaternion(cos(dFx/2), 0, sin(dFx/2), 0); % around Y 
-% Q = quaternion(cos(dFz/2), 0, 0, sin(dFz/2)); % around Z
-% R = quaternion(cos(dFy/2), sin(dFy/2), 0, 0); % around X
-
-P = [cos(gamma/2), 0, sin(gamma/2), 0]; % around X
-Q = [cos(teta/2), 0, 0, sin(teta/2)]; % around Z
-R = [cos(psi/2), sin(psi/2), 0, 0]; % around Y
-
 L = [1, 0, 0, 0];
-% L = quatmultiply(P, quatmultiply(Q, R)); % Main quaternion L = R ? Q ? R
-sL = conj(L);                            % Complex conjugate of main quaternion
-                                         % (Сопряженный кватернион)
+G = [1, - U * cos(phi) * dt, - U * sin(phi) * dt, 0];
                           
-% Main quaternion initial build
-% q1 = quatmultiply(P, Q);
-% q_prev = quatmultiply(q1, R);
-
-% C matrix [body -> inertial] initial build 
-q0 = real(L(1));
-q1 = real(L(2));
-q2 = real(L(3));
-q3 = real(L(4));
-
-C_prev = [q0^2 + q1^2 - q2^2 - q3^2, 2 * (q1 * q2 - q3 * q0),   2 * (q1 * q3 + q0 * q2);
-     2 * (q1 * q2 + q0 * q3),   q0^2 - q1^2 + q2^2 - q3^2, 2 * (q2 * q3 - q0 * q1);
-     2 * (q1 * q3 - q0 * q2),   2 * (q2 * q3 + q0 * q1),   q0^2 - q1^2 - q2^2 + q3^2];
- 
 % Start simulink model
 % Отказался, так как не понял, как заставить работать функции
 % из тулбокса кватерниона в матлаб моделях (самописных) симулинка
 % sim('model', simulation_time);
 
-Vx_n_plot = zeros(1, simulation_time);
-Vy_n_plot = zeros(1, simulation_time);
-Vz_n_plot = zeros(1, simulation_time);
+tmp1 = zeros(1, simulation_time);
+tmp2 = zeros(1, simulation_time);
+tmp3 = zeros(1, simulation_time);
 
-Psi_plot = zeros(1, simulation_time);
-Teta_plot = zeros(1, simulation_time);
-Gamma_plot = zeros(1, simulation_time);
+% Programm flags
+debug = 0;
+single_plot = 1;
 
 % Programm start
 % -----------------------------------------------------------
-for i=1:simulation_time
-    % Calculate 'q' quat for IMU imulation
-    g = getcurrentg(h, phi);
+for i=2:simulation_time    
+    % Calculate g with respect ot NSSK
+    g = getcurrentg(200, phi); % Сюда должны передавать h
+    gn = quatrotate(G, g);
     
     % Emulate IMU noise
     Ax_b = normrnd(g(1), aSigma);
     Ay_b = normrnd(g(2), aSigma);
     Az_b = normrnd(g(3), aSigma);
      
-%     Ax_b = g(1);
-%     Ay_b = g(2);
-%     Az_b = g(3);
-     
-    Ab = [Ax_b, Ay_b, Az_b];
+    Ab = [Ax_b; Ay_b; Az_b];
     
-    Fx_b = normrnd(U * sin(phi) * dt, wSigma);
-    Fy_b = normrnd(U * cos(phi) * dt, wSigma);
+    Fx_b = normrnd(U * cos(phi) * dt, wSigma);
+    Fy_b = normrnd(U * sin(phi) * dt, wSigma);
     Fz_b = normrnd(0, wSigma);
-
-%     Fx_b = U * sin(phi);
-%     Fy_b = U * cos(phi);
-%     Fz_b = 0;
     
-    Fb = [Fx_b, Fy_b, Fz_b];
+    Fb = [Fx_b; Fy_b; Fz_b];
     
-    % Calculte angular velosytes
-    Wx_b = Wx_b + Fb(1);
-    Wy_b = Wy_b + Fb(2);
-    Wz_b = Wz_b + Fb(3);
-    
-    Wb = [Wx_b, Wy_b, Wz_b];
-    
-    % Calculate orientation vector
-    
-    % Cross-simetric matrix of angular vels
-    Wb_ks = [0 -Wb(3) Wb(2); Wb(3) 0 -Wb(1); -Wb(2) Wb(3) 0];
-    
-    % Orientation vector increes
-    dEf = Fb + Wb_ks1 .* Fb ./ 6 - Wb_ks2 .* Fb ./ 24;
-    
-    % Amount of orientation vector
-    dTeta = sqrt(dEf(1)^2 + dEf(2)^2 + dEf(3)^2);
-    
-    Wb_ks2 = Wb_ks1;
-    Wb_ks1 = Wb_ks;
-    
-    % Calculate increment of quaternion
-    dL0 = 1 - dTeta^2/8 + dTeta^4/384; 
-    dL1 = dEf(1) * (0.5 - dTeta^2/48 + dTeta^4/512);
-    dL2 = dEf(2) * (0.5 - dTeta^2/48 + dTeta^4/512);
-    dL3 = dEf(3) * (0.5 - dTeta^2/48 + dTeta^4/512);
-    
-    % Incresment L quat
-    dL = [dL0 dL1 dL2 dL3];
-    % Earth rotation quat
-    G = [1, - Fb(1), - Fb(2), -Fb(3)];
-    
-    % Recalculate main quat
-    L = quatmultiply(L, dL);
-    L = quatmultiply(G, L);
-    
-    % Conning compensation of gyros angular vels
-    % ----
-        
-    % Project IMU info to NSSK
-    An = quatrotate(L, Ab);
-    Fn = quatrotate(L, Fb);
-    
-    M = quat2rotm(L);
-    m0 = sqrt(M(3,1)^2 + M(3,3)^2);
-    
-%     l = realpartsvar(quaternion(L));
-%     M(3,2) = 2 * (l(3) * l(4) + l(1) * l(2));
-%     M(3,1) = 2 * (l(2) * l(4) - l(1) * l(3));
-%     M(3,3) = l(1)^2 + l(4)^2 - l(2)^2- l(3)^2;
-%     M(1,2) = 2 * (l(2) * l(3) - l(1) * l(4));
-%     M(2,2) = l(1)^2 + l(3)^2 - l(2)^2- l(4)^2;
-    
-    teta  = atan2(M(3,2), m0);
-    psi   = atan2(M(1,2),M(2,2));
-    gamma = -atan2(M(3,1),M(3,3));
-% 
-%     teta = teta + Fn(2);
-%     psi = psi + Fn(3);
-%     gamma = gamma + Fn(1);
-
     % Gyros compensation
     % ----
     
-    % Sculling compensation
-    Vx_n = Vx_n_prev + (An(1) + Vy_n_prev * Fn(3) - Vz_n_prev * Fn(2) - g(1)) * dt;
-    Vy_n = Vy_n_prev + (An(2) + Vz_n_prev * Fn(1) - Vx_n_prev * Fn(3) - g(2)) * dt;
-    Vz_n = Vz_n_prev + (An(3) + Vy_n_prev * Fn(1) - Vx_n_prev * Fn(2) - g(3)) * dt;
+    % Axels compensation
+    % ----
     
-    Vx_n = Vx_n + (2 * U * cos(phi) * Vy_n - Vx_n * (Vx_n / Rad + 2 * U * cos(phi))) * dt;
-    Vy_n = Vy_n - (2 * U * sin(phi) * Vx_n - Vx_n * (Vy_n / Rad + 2 * U * sin(phi))) * dt;
+    % Recalculate G quat
+    E = eye(4,4);
+    A = make4SkewMatrix([U * cos(phi) * dt; U * sin(phi) * dt; 0]);
+    dG = E + 0.5 * A + 0.25 * A^2;
+    G = (dG * G')';
+    
+    % Recalculate main quat
+    A = make4SkewMatrix(Fb);
+    dL = E + 0.5 * A + 0.25 * A^2;
+    L = (dL * L')';
+        
+    % Project IMU info to NSSK
+    An = quatrotate(L, Ab');
+    Fn = quatrotate(L, Fb');
 
-    Psi_plot(i) = psi;
-    Teta_plot(i) = teta;
-    Gamma_plot(i) = gamma;
+    M = quat2rotm(L);
     
-    Vx_n_prev = Vx_n;
-    Vy_n_prev = Vy_n;
-    Vz_n_prev = Vz_n;
+    m0 = sqrt(M(3,1)^2 + M(3,3)^2);
+
+    gamma(i)  = atan2(M(3,2), m0);
+    teta(i)   = atan2(M(1,2),M(2,2));
+    psi(i)    = -atan2(M(3,1),M(3,3));
+
+    Vx_n(i) = Vx_n(i-1) + (An(1) - gn(1)) * dt;
+    Vy_n(i) = Vy_n(i-1) + (An(2) - gn(2)) * dt;
+    Vz_n(i) = Vz_n(i-1) + (An(3) - gn(3)) * dt;
+
+    h(i) = h(i-1) + Vy_n(i) * dt;
     
-    Vx_b_plot(i) = Vx_n;
-    Vy_b_plot(i) = Vy_n;
-    Vz_b_plot(i) = Vz_n;
-    
-    % Body to nav valc
-    
-    % Orientation angles calc
-    
+    if (debug)
+        tmp1(i) = An(1);
+        tmp2(i) = An(2);
+        tmp3(i) = An(3);
+    end
+
     if (0 == mod(i, 1000))
-        det(M)
         i
     end
+    
+    % Sculling compensation
+%     Vx_n(i) = Vx_n(i-1) + (An(1) + Vy_n(i-1) * Fn(3) - Vz_n(i-1) * Fn(2) - gn(1)) * dt;
+%     Vy_n(i) = Vy_n(i-1) + (An(2) + Vz_n(i-1) * Fn(1) - Vx_n(i-1) * Fn(3) - gn(2)) * dt;
+%     Vz_n(i) = Vz_n(i-1) + (An(3) + Vy_n(i-1) * Fn(1) - Vx_n(i-1) * Fn(2) - gn(3)) * dt;
 end
 
-t=1:simulation_time;
-figure(1);
-plot(t, Vx_b_plot);
-grid on;
+t=1:simulation_time * dt;
 
-figure(2);
-plot(t, Vy_b_plot);
-grid on;
+if (debug)
+    subplot(2, 2, 1);
+    plot(t, tmp3(1/dt:1/dt:end));
+    title('tmp1');
+    grid on;
 
-figure(3);
-plot(t, Vz_b_plot);
-grid on;
+    subplot(2, 2, 2);
+    plot(t, tmp2(1/dt:1/dt:end));
+    title('tmp2');
+    grid on;
 
-figure(4);
-plot(t, Psi_plot);
-grid on;
+    subplot(2, 2, 3);
+    plot(t, tmp3(1/dt:1/dt:end));
+    title('tmp3');
+    grid on;
+    
+    subplot(2, 2, 4);
+    plot(t, h(1/dt:1/dt:end));
+    title('h');
+    grid on;
+    
+    orv = [gamma(simulation_time); psi(simulation_time); teta(simulation_time)];
+    orvg = [gamma(simulation_time) * 57.3; psi(simulation_time) * 57.3; teta(simulation_time) * 57.3];
+    Vn = [Vx_n(simulation_time); Vy_n(simulation_time); Vz_n(simulation_time)];
+elseif (single_plot)
+    figure(1);
+    plot(t, Vx_n(1/dt:1/dt:end));
+    title('Vx');
+    xlabel('Время, с');
+    ylabel('Линейная скорость, м/с');
+    grid on;
 
-figure(5);
-plot(t, Teta_plot);
-grid on;
+    figure(2);
+    plot(t, Vy_n(1/dt:1/dt:end));
+    title('Vy');
+    xlabel('Время, с');
+    ylabel('Линейная скорость, м/с');
+    grid on;
 
-figure(6);
-plot(t, Gamma_plot);
-grid on;
+    figure(3);
+    plot(t, Vz_n(1/dt:1/dt:end));
+    title('Vz');
+    xlabel('Время, с');
+    ylabel('Линейная скорость, м/с');
+    grid on;
+
+    figure(4);
+    plot(t, gamma(1/dt:1/dt:end));
+    title('gamma (X)');
+    xlabel('Время, с');
+    ylabel('Угол, рад');
+    grid on;
+
+    figure(5);
+    plot(t, psi(1/dt:1/dt:end));
+    title('psi (Y)');
+    xlabel('Время, с');
+    ylabel('Угол, рад');
+    grid on;
+
+    figure(6);
+    plot(t, teta(1/dt:1/dt:end));
+    title('teta (Z)');
+    xlabel('Время, с');
+    ylabel('Угол, рад');
+    grid on;
+    
+    figure(7);
+    plot(t, h(1/dt:1/dt:end));
+    title('h');
+    xlabel('Время, с');
+    ylabel('Высота, м');
+    grid on;
+else
+    subplot(2, 3, 1);
+    plot(t, Vx_n(1/dt:1/dt:end));
+    title('Vx');
+    xlabel('Время, с');
+    ylabel('Линейная скорость, м/с');
+    grid on;
+
+    subplot(2, 3, 2);
+    plot(t, Vy_n(1/dt:1/dt:end));
+    title('Vy');
+    xlabel('Время, с');
+    ylabel('Линейная скорость, м/с');
+    grid on;
+
+    subplot(2, 3, 3);
+    plot(t, Vz_n(1/dt:1/dt:end));
+    title('Vz');
+    xlabel('Время, с');
+    ylabel('Линейная скорость, м/с');
+    grid on;
+
+    subplot(2, 3, 4);
+    plot(t, gamma(1/dt:1/dt:end));
+    title('gamma (X)');
+    xlabel('Время, с');
+    ylabel('Угол, рад');
+    grid on;
+
+    subplot(2, 3, 5);
+    plot(t, psi(1/dt:1/dt:end));
+    title('psi (Y)');
+    xlabel('Время, с');
+    ylabel('Угол, рад');
+    grid on;
+
+    subplot(2, 3, 6);
+    plot(t, teta(1/dt:1/dt:end));
+    title('teta (Z)');
+    xlabel('Время, с');
+    ylabel('Угол, рад');
+    grid on;
+end
