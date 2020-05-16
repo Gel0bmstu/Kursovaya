@@ -5,25 +5,20 @@ clear all;
 % -----------------------------------------------------------
 % Default vals
 % -----------------------------------------------------------
-
-g = [0, 9.8153, 0]; % [m/s^2]
-gc = 9.8153; % [m/s^2]
-Rad = 6378245; % [m]
-h = 200; % [m]
-M = 5.9726e24; % Earth mass [kg]
-U = 7.29e-5; % [rad/s]
-dt = 1/400; % Sampling rate [1/Hz]
-
-simulation_time = 3600 * 1 / dt; % [sec]
+settings = ModelSettings(3600, 400);
+settings = settings.set_debug_mode_flag(true);
+settings = settings.set_print_solutions_flag(true);
+settings = settings.set_subplot_print_flag(true);
+settings = settings.set_save_solutions_flag(true);
 
 % -----------------------------------------------------------
 % Start SINS params
 % -----------------------------------------------------------
 % Moscow cords
-phi = 56 / 57.3;
-la = 38 / 57.3;
-h   = zeros(1, simulation_time);
-h(1) = 200;
+% phi = 56 / 57.3;
+% la = 38 / 57.3;
+% h   = zeros(1, simulation_time);
+% h(1) = 200;
 
 % Errors
 % -----------------------------------------------------------
@@ -86,6 +81,7 @@ Wz_n(1) = 0;
 % Angles
 % -----------------------------------------------------------
 
+
 % Angular vels incriments
 Fx_b = 0;
 Fy_b = 0;
@@ -109,29 +105,7 @@ gamma(1) = gamma_err / 57.3;
 
 % NIR values
 % -----------------------------------------------------------
-t_calibrate_1 = 2*60*1/dt; % Время проведения первого этапа калибровки [сек]
-t_calibrate_2 = 5*60*1/dt; % Время проведения второго этапа калибровки [сек]
 
-fa = fopen('axels_errors.txt', 'w+');
-fw = fopen('gyros_errors.txt', 'w+');
-
-Ax_true_bias = (2 * randi([0 1]) - 1) * (-0.03924 + rand * 2 * 0.03924);
-Ay_true_bias = (2 * randi([0 1]) - 1) * (-0.03924 + rand * 2 * 0.03924);
-Az_true_bias = (2 * randi([0 1]) - 1) * (-0.03924 + rand * 2 * 0.03924);
-
-Ax_true_scale_f = (1.2 + rand * 0.26);
-Ay_true_scale_f = (1.2 + rand * 0.26);
-Az_true_scale_f = (1.2 + rand * 0.26);
-
-fprintf(fa, "%s\n", "Реальное смещение нуля акселерометров:");
-fprintf(fa, "Ax: %6f\n", Ax_true_bias);
-fprintf(fa, "Ay: %6f\n", Ay_true_bias);
-fprintf(fa, "Az: %6f\n\n", Az_true_bias);
-
-fprintf(fa, "%s\n", "Реальные масштабные коэффициенты акселерометров:");
-fprintf(fa, "Ax: %6f\n", Ax_true_scale_f);
-fprintf(fa, "Ay: %6f\n", Ay_true_scale_f);
-fprintf(fa, "Az: %6f\n\n", Az_true_scale_f);
 
 % Wx_true_bias = (2 * randi([0 1]) - 1) * (-0.03924 + rand * 2 * 0.03924);
 % Wy_true_bias = (2 * randi([0 1]) - 1) * (-0.03924 + rand * 2 * 0.03924);
@@ -172,6 +146,58 @@ nir_calibration = 1;
 
 E = eye(4);
 
+function calibrated_params = calibration(calibration_time, settings)
+    
+    fa = fopen(settings.axels_errors_file_path, 'w+');
+    fw = fopen(settings.gyros_errors_file_path, 'w+');
+
+    if (settings.log_calibration_parameters_flag)
+        fprintf(fa, "%s\n", "Реальное смещение нуля акселерометров:");
+        fprintf(fa, "Ax: %6f\n", Ax_true_bias);
+        fprintf(fa, "Ay: %6f\n", Ay_true_bias);
+        fprintf(fa, "Az: %6f\n\n", Az_true_bias);
+
+        fprintf(fa, "%s\n", "Реальные масштабные коэффициенты акселерометров:");
+        fprintf(fa, "Ax: %6f\n", Ax_true_scale_f);
+        fprintf(fa, "Ay: %6f\n", Ay_true_scale_f);
+        fprintf(fa, "Az: %6f\n\n", Az_true_scale_f);
+    end
+
+    % Setting calibration angles for sensors
+    axels_calibrating_angenls = [  
+        % X
+        0, 90, 0;  %1
+        0, 270, 0; %2
+        
+        % Y
+        90, 0, 0;  %3
+        270, 0, 0; %4
+        
+        % Z
+        0, 0, 0;   %5
+        0, 180, 0; %6
+        ];
+    
+    gyros_calibrating_angenls = [  
+        % N and Up
+        0, 0, 0;    %1
+        0, 180, 0;  %2
+        
+        % E
+        90, 0, 0;   %3
+        90, 0, 180; %4
+        ];
+    
+    % Create array 
+    % Fill in the array with zeros
+    cAx_1 = zeros(1,t_calibrate_1);
+    cAx_2 = zeros(1,t_calibrate_1);
+    cAy_1 = zeros(1,t_calibrate_1);
+    cAy_2 = zeros(1,t_calibrate_1);
+    cAz_1 = zeros(1,t_calibrate_1);
+    cAz_2 = zeros(1,t_calibrate_1);
+end
+
 % Инициализируем процесс калибровки перед началом работы БИНС
 % в режиме навигации
 if (nir_calibration)
@@ -180,29 +206,7 @@ if (nir_calibration)
     % Y = N (gamma)
     % Z = Up (psi)
     % Задаем углы поворота, при которых мы будем калибровать БЧЭ [град]
-    a_calibrating_angenls = [  
-        % Акселерометр Х
-        0, 90, 0;  %1
-        0, 270, 0; %2
-        
-        % Акселерометр Y
-        90, 0, 0;  %3
-        270, 0, 0; %4
-        
-        % Акселерометр Z
-        0, 0, 0;   %5
-        0, 180, 0; %6
-        ];
-    
-    w_calibrating_angenls = [  
-        % Гироскоп N и Up
-        0, 0, 0;    %1
-        0, 180, 0;  %2
-        
-        % Гироскоп E
-        90, 0, 0;   %3
-        90, 0, 180; %4
-        ];
+
     
     cAx_1 = zeros(1,t_calibrate_1);
     cAx_2 = zeros(1,t_calibrate_1);
@@ -290,7 +294,7 @@ if (nir_calibration)
     fprintf(fa, "Ay: |%6f - %6f| = %6f\n", Ay_true_scale_f, Ay_scale_f, abs(Ay_true_scale_f - Ay_scale_f));
     fprintf(fa, "Ay: |%6f - %6f| = %6f\n\n", Az_true_scale_f, Az_scale_f, abs(Az_true_scale_f - Az_scale_f));
     
-%     % Находим среднее значение измеренных скоростей Земли U
+%     % Находим среднее значение скоростей Земли U
 %     meanWx1 = mean(cWx_1);
 %     meanWx2 = mean(cWx_2);
 %     
