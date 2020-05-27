@@ -1,11 +1,11 @@
-clear all;
+total_plots = 8;
+delimeters = [];
+for i = 1:total_plots
+    if (mod(total_plots, i) == 0)
+        delimeters = [delimeters, i];
+    end
+end
 
-phi = 60 / 57.3;
-U = [0, 5, 0];
-
-U_ok = [U(2) * cos(phi), U(2) * sin(phi), 0]
-
-rotation = [cos(30/57.3/2), 0, 0, sin(30/57.3/2)];
-
-q = quaternion(rotation);
-res = quatrotate(rotation, U)
+delimeters
+columns_count = delimeters(1 + round(length(delimeters) / 2))
+rows_count = total_plots / columns_count

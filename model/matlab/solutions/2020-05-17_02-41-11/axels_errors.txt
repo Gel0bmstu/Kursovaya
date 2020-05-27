@@ -1,0 +1,31 @@
+Real axels biases:
+Ax: 0.035797
+Ay: 0.020814
+Az: -0.038031
+
+Real axels scale obj.axels_calibration_results_filectors:
+Ax: 1.226395
+Ay: 1.315042
+Az: 1.270632
+
+Calculated axels biases:
+Ax:    NaN
+Ay:    NaN
+Az:    NaN
+
+Calculated axels scale obj.settings.axels_calibration_results_filectors:
+Ax:    NaN
+Ay:    NaN
+Az:    NaN
+
+--------------------------------------------------
+Bias calibration error:
+Ax: |0.035797 -    NaN| =    NaN
+Ay: |0.020814 -    NaN| =    NaN
+Ay: |-0.038031 -    NaN| =    NaN
+
+Scale factor calibration error:
+Ax: |1.226395 -    NaN| =    NaN
+Ay: |1.315042 -    NaN| =    NaN
+Ay: |1.270632 -    NaN| =    NaN
+
