@@ -5,7 +5,7 @@ clear all;
 % -----------------------------------------------------------
 % Default vals
 % -----------------------------------------------------------
-settings = ModelSettings(3600, 400);
+settings = ModelSettings(93*60, 1);
 disp('Algorithm setting:');
 settings = settings.set_debug_mode_flag(true);
 settings = settings.set_display_solutions_flag(true);

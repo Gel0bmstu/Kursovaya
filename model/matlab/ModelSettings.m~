@@ -2,22 +2,22 @@ classdef ModelSettings
     properties
         % Model settings
         % ----------------------------------------------------------------------------------------
-        gc    =  9.8153;        % Acceleration of gravity       [m/s^2]
-        g     = [0, 9.8153, 0]; % Array of 'g' for model        [{m/s^2, m/s^2, m/s^2}]
-        Rad   = 6378245;        % Earth radius                  [m]
-        h_min = 400e3;          % Min height above sea level    [m]
-        h_max = 428e3;          % Max height above sea level    [m]
-        v_min = 7649.7222;      % Min satellite linear velocity [m/sec]
-        v_max = 7666.6667;      % Max satellite linear velocity [m/sec]
-        M     = 5.9726e24;      % Earth mass                    [kg]
-        U     = 7.29e-5;        % Earth angular velocity        [rad/s]
-        phi   = 56 / 57.3;      % Moscow latitude               [rad]        
+        gc    =  9.8153;        % Acceleration of gravity     [m/s^2]
+        g     = [0, 9.8153, 0]; % Array of 'g' for model      [{m/s^2, m/s^2, m/s^2}]
+        Rad   = 6378245;        % Earth radius                [m]
+        h_min = 400e3;          % Min height above sea level  [m]
+        h_max = 428e3;          % Max height above sea level  [m]
+        h_min = 400e3;          % Min height above sea level  [m]
+        h_max = 428e3;          % Max height above sea level  [m]
+        M   = 5.9726e24;        % Earth mass                  [kg]
+        U   = 7.29e-5;          % Earth angular velocity      [rad/s]
+        phi = 56 / 57.3;        % Moscow latitude             [rad]        
         
         % Simulation settings
         % ----------------------------------------------------------------------------------------
         dt;                    % Alghoritm sampling period         [1/Hz]
         simulation_time;       % Alghoritm simulation time         [sec]
-        sample_rate;           % Alghoritm sample rate             [Hz]         
+        sample_rate;           % 
         simulation_iterations; % Alghoritm simulation itterations  [n]
         
         % Calibration settings
@@ -103,8 +103,8 @@ classdef ModelSettings
         end
         
         function obj = set_log_algorithm_solutions_flag(obj, save_solutions)
-            obj.log_algorithm_solutions_flag = save_solutions;
-            fprintf('Solution log mode:     %d.\n', obj.log_algorithm_solutions_flag);
+            obj.save_solutions_flag = save_solutions;
+            fprintf('Solution save:         %d.\n', obj.save_solutions_flag);
         end
     end
 end
