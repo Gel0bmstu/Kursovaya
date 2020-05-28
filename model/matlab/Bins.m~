@@ -51,14 +51,14 @@ classdef Bins
         
         % Real trajectory parameters
         % ----------------------------------------------------------------------------------------------------------------
-        k;       % 
+        k;       % Turnover speed/radius factor
         
-        R_real;  % 
+        R_real;  % Real distance from the center of the earth to the spacecraft
         fi_real; % Real latitude [rad]
         la_real; % Real longitude [rad]
         
-        vx_real; vy_real; vz_real; % Real 
-        wx_real; wy_real; wz_real; % Real 
+        vx_real; vy_real; vz_real; % Real liner velocity
+        wx_real; wy_real; wz_real; % Real angular velocity
         
         % Angular velocity
         % ----------------------------------------------------------------------------------------------------------------
@@ -306,13 +306,13 @@ classdef Bins
         function obj = run(obj)
             % Sensors clibtarion step
             if (obj.settings.calibration_mode_flag)
-                obj.calibration();
+                obj = obj.calibration();
             end
             
             % Solutions arrays initialization step
-            obj.initialize_solutions_arrays_();
+            obj = obj.initialize_solutions_arrays_();
             
-            obj.generate_trajectory_()
+            obj = obj.generate_trajectory_();
             
             % Main cycle
 %             for i=2:obj.settings.simulation_iterations
@@ -321,7 +321,7 @@ classdef Bins
             
             % Log solution results & errors in file
             if (obj.settings.log_algorithm_solutions_flag)
-                obj.log_solution_to_file_();
+                obj = obj.log_solution_to_file_();
             end
             
             % Print graphs
@@ -379,23 +379,29 @@ classdef Bins
                   v(2), -v(3),   0,   v(1);
                   v(3),  v(2), v(1),  0];
         end
+        function mtr = make3SkewMatrix(v)
+            m = [0 -v(3) v(2);
+                 v(3) 0 -v(1);
+                 -v(2) v(3) 0];
+        end        
         function obj = log_solution_to_file_(obj)
-            fe = fopen(obj.settings.algorithm_results_errors_file_path, 'w+');
+%             fe = fopen(obj.settings.algorithm_results_errors_file_path, 'w+');
 
-            fprintf(fe, "%s\n", "Âåêòîð g, äëÿ ïðîâåðêè óõîäà ïî ñêîðîñòÿì:");
-            fprintf(fe, 'Ax - gx: %6f\nAy - gy: %6f\nAz - gz: %6f\n\n', obj.An(1) - obj.gn(1), obj.An(2) - obj.gn(2), obj.An(3) - obj.gn(3));
+%             fprintf(fe, "%s\n", "Âåêòîð g, äëÿ ïðîâåðêè óõîäà ïî ñêîðîñòÿì:");
+%             fprintf(fe, 'Ax - gx: %6f\nAy - gy: %6f\nAz - gz: %6f\n\n', obj.An(1) - obj.settings.gn(1), obj.An(2) - obj.settings.gn(2), obj.An(3) - obj.settings.gn(3));
 
-            fprintf(fe, 'gx * %f = %6f\ngy * %f = %6f\ngz * %f = %6f\n\n', obj.settings.simulation_time * dt, (An(1) - gn(1)) * simulation_time * dt, simulation_time * dt, (An(2) - gn(2)) * simulation_time * dt, simulation_time * dt, (An(3) - gn(3)) * simulation_time * dt);
+%             fprintf(fe, 'gx * %f = %6f\ngy * %f = %6f\ngz * %f = %6f\n\n', obj.settings.simulation_iterations, (obj.An(1) - obj.settings.gn(1)) * simulation_time * dt, ... 
+%                 obj.settings.simulation_iterations, (obj.An(2) - obj.settings.gn(2)) * obj.settings.simulation_iterations, obj.settings.simulation_iterations, (obj.An(3) - obj.settings.gn(3)) * obj.settings.simulation_iterations);
 
-            fprintf(fe, "%s\n", "Îøèáêà àëãîðèòìà ÁÈÍÑ ïî ñêîðîñòÿì:");
-            fprintf(fe, "Vx: |%6f - %6f| = %6f [m/^2]\n", 0, obj.Vx_n(obj.settings.simulation_time), abs(0 - obj.Vx_n(obj.settings.simulation_time)));
-            fprintf(fe, "Vy: |%6f - %6f| = %6f [ì/ñ^2]\n", 0, obj.Vy_n(obj.settings.simulation_time), abs(0 - obj.Vy_n(obj.settings.simulation_time)));
-            fprintf(fe, "Vz: |%6f - %6f| = %6f [ì/ñ^2]\n\n", 0, obj.Vz_n(obj.settings.simulation_time), abs(0 - obj.Vz_n(obj.settings.simulation_time)));
+%             fprintf(fe, "%s\n", "Îøèáêà àëãîðèòìà ÁÈÍÑ ïî ñêîðîñòÿì:");
+%             fprintf(fe, "Vx: |%6f - %6f| = %6f [m/^2]\n", 0, obj.Vx_n(obj.settings.simulation_time), abs(0 - obj.Vx_n(obj.settings.simulation_time)));
+%             fprintf(fe, "Vy: |%6f - %6f| = %6f [ì/ñ^2]\n", 0, obj.Vy_n(obj.settings.simulation_time), abs(0 - obj.Vy_n(obj.settings.simulation_time)));
+%             fprintf(fe, "Vz: |%6f - %6f| = %6f [ì/ñ^2]\n\n", 0, obj.Vz_n(obj.settings.simulation_time), abs(0 - obj.Vz_n(obj.settings.simulation_time)));
 
-            fprintf(fe, "%s\n", "Îøèáêà àëãîðèòìà ÁÈÍÑ ïî óãëàì:");
-            fprintf(fe, "psi:   |%6f - %6f| = %6f [ãðàä]\n", U * sin(obj.phi) * obj.settings.simulation_time * dt * 57.3, obj.psi(obj.settings.simulation_time) * 57.3, abs(obj.settings.U * sin(obj.phi) * obj.settings.simulation_time * dt * 57.3 - obj.psi(obj.settings.simulation_time) * 57.3));
-            fprintf(fe, "teta:  |%6f - %6f| = %6f [ãðàä]\n", 0, obj.teta(obj.settings.simulation_time) * 57.3, abs(0 - obj.teta(obj.settings.simulation_time) * 57.3));
-            fprintf(fe, "gamma: |%6f - %6f| = %6f [ãðàä]\n\n", U * cos(obj.phi) * obj.settings.simulation_time * dt * 57.3, obj.gamma(obj.settings.simulation_time) * 57.3, abs(obj.settings.U * cos(obj.phi) * obj.settings.simulation_time * dt * 57.3 - obj.gamma(obj.settings.simulation_time) * 57.3));
+%             fprintf(fe, "%s\n", "Îøèáêà àëãîðèòìà ÁÈÍÑ ïî óãëàì:");
+%             fprintf(fe, "psi:   |%6f - %6f| = %6f [ãðàä]\n", U * sin(obj.phi) * obj.settings.simulation_time * dt * 57.3, obj.psi(obj.settings.simulation_time) * 57.3, abs(obj.settings.U * sin(obj.phi) * obj.settings.simulation_time * dt * 57.3 - obj.psi(obj.settings.simulation_time) * 57.3));
+%             fprintf(fe, "teta:  |%6f - %6f| = %6f [ãðàä]\n", 0, obj.teta(obj.settings.simulation_time) * 57.3, abs(0 - obj.teta(obj.settings.simulation_time) * 57.3));
+%             fprintf(fe, "gamma: |%6f - %6f| = %6f [ãðàä]\n\n", U * cos(obj.phi) * obj.settings.simulation_time * dt * 57.3, obj.gamma(obj.settings.simulation_time) * 57.3, abs(obj.settings.U * cos(obj.phi) * obj.settings.simulation_time * dt * 57.3 - obj.gamma(obj.settings.simulation_time) * 57.3));
 
         end
         function obj = set_plot_parameters_(obj)

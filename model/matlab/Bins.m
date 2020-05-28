@@ -51,14 +51,14 @@ classdef Bins
         
         % Real trajectory parameters
         % ----------------------------------------------------------------------------------------------------------------
-        k;       % 
+        k;       % Turnover speed/radius factor
         
-        R_real;  % 
+        R_real;  % Real distance from the center of the earth to the spacecraft
         fi_real; % Real latitude [rad]
         la_real; % Real longitude [rad]
         
-        vx_real; vy_real; vz_real; % Real 
-        wx_real; wy_real; wz_real; % Real 
+        vx_real; vy_real; vz_real; % Real liner velocity
+        wx_real; wy_real; wz_real; % Real angular velocity
         
         % Angular velocity
         % ----------------------------------------------------------------------------------------------------------------
@@ -379,6 +379,11 @@ classdef Bins
                   v(2), -v(3),   0,   v(1);
                   v(3),  v(2), v(1),  0];
         end
+        function mtr = make_3x3_skew_matrinx_from_vector_(v)
+            mtr = [0 -v(3) v(2);
+                   v(3) 0 -v(1);
+                  -v(2) v(3) 0];
+        end        
         function obj = log_solution_to_file_(obj)
 %             fe = fopen(obj.settings.algorithm_results_errors_file_path, 'w+');
 
