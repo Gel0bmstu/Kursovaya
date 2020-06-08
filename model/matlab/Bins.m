@@ -30,13 +30,19 @@ classdef Bins
         Wn; Wx_n; Wy_n; Wz_n; % Object angular velocity in NSSK
         Vn; Vx_n; Vy_n; Vz_n; % Object linear velocity in NSSK
         Fn; Fx_n; Fy_n; Fz_n; % Object angular vels incriments in NSSK
+        Sn; Sx_n; Sy_n; Sz_n; % Object coordinates in NSSK 
         
         Ab; Ax_b; Ay_b; Az_b; % Object accelerations in SSK
         Wb; Wx_b; Wy_b; Wz_b; % Object angular velocity in SSK
         Vb; Vx_b; Vy_b; Vz_b; % Object linear velocity in SSK
         Fb; Fx_b; Fy_b; Fz_b; % Object angular vels incriments in SSK
         
-        psi, teta, gamma, h; % Object angles in NSSK
+        Sg; Sx_g; Sy_g; Sz_g; % Object coordinates in GSK
+        Sr; Sx_r; Sy_r; Sz_r; % Real ISS coordinates in GSK
+        
+        psi; teta; gamma; h; % Object angles in NSSK
+        phi; la;             % Object trajectory in GSK
+
         
         % Files
         % ---------------------------------------------------------------------------------------------------------------   
@@ -47,18 +53,32 @@ classdef Bins
         % Rotation quaternions
         % ----------------------------------------------------------------------------------------------------------------
         L; % Quaternion characterizing the transition from SSK to NSSK
-        G; % Quaternion ...
+        G; % Quaternion between NSSK and GSK
+        
+        % Generated trajectory parameters
+        % ----------------------------------------------------------------------------------------------------------------    
+        k;            % Turnover speed/radius factor
+                
+        R_generated;  % Generated distance from the 
+                      % center of the earth to the spacecraft [m]
+        fi_generated; % Generated latitude                    [rad]
+        la_generated; % Generated longitude                   [rad]
+        
+        Vx_generated; Vy_generated; Vz_generated; % Generated liner velocity in SSK
+        Wx_generated; Wy_generated; Wz_generated; % Generated angular velocity in SSK
+        Ax_generated; Ay_generated; Az_generated; % Generated spaceship acceleration in SSK
         
         % Real trajectory parameters
-        % ----------------------------------------------------------------------------------------------------------------
-        k;       % Turnover speed/radius factor
+        % ----------------------------------------------------------------------------------------------------------------        
+        R_real;  % Real distance from the
+                 % center of the earth to the spacecraft [m]
+        fi_real; % Real latitude                         [rad]
+        la_real; % Real longitude                        [rad]
+        t_real;  % UTC time at each point of trajectory  [date]
         
-        R_real;  % Real distance from the center of the earth to the spacecraft
-        fi_real; % Real latitude [rad]
-        la_real; % Real longitude [rad]
-        
-        vx_real; vy_real; vz_real; % Real liner velocity
-        wx_real; wy_real; wz_real; % Real angular velocity
+        Vx_real; Vy_real; Vz_real; % Real liner velocity in SSK
+        Wx_real; Wy_real; Wz_real; % Real angular velocity in SSK
+        Ax_real; Ay_real; Az_real; % Real spaceship acceleration in SSK
         
         % Angular velocity
         % ----------------------------------------------------------------------------------------------------------------
@@ -69,7 +89,9 @@ classdef Bins
         % Other variables
         % ----------------------------------------------------------------------------------------------------------------
         settings; % Variable that contains setings of program
-       
+        c                    = 1; % Counter for main loop
+        gpv;
+        
         % Containers for plots
         plot_tile;
         plot_parameter;
@@ -83,9 +105,24 @@ classdef Bins
             % Apply BINS settings
             obj.settings = settings;
             
+            obj = obj.initialize_model_arrays_();
+            
+            obj.phi(1) = obj.settings.phi;
+            obj.la(1)  = obj.settings.la;
+            
+            obj.psi   = 36.76 / 57.3;
+            obj.teta  = - 38.45 / 57.3;
+            obj.gamma = - 1.36  / 57.3;
+            
+            P = [cos(obj.psi/2), 0, sin(obj.psi/2), 0];
+            Q = [cos(obj.teta/2), 0, 0, sin(obj.teta/2)];
+            R = [cos(obj.gamma/2), sin(obj.gamma/2), 0, 0];
+            
             % Initialize quaternions
             obj.L = [1, 0, 0, 0];
-            obj.G = [1, - settings.U * cos(settings.phi) * settings.dt, - settings.U * sin(settings.phi) * settings.dt, 0];
+            obj.G = [cos(obj.psi/2) * cos(obj.teta/2) * cos(obj.gamma/2), sin(obj.gamma/2), sin(obj.psi/2), sin(obj.teta/2)];
+%             obj.G = quatmultiply(P, quatmultiply(Q, R));
+%             obj.G = [1, - settings.U * cos(settings.phi) * settings.dt, - settings.U * sin(settings.phi) * settings.dt, 0];
             
             % Sensors initialization
             obj.ax = Accelerometer(settings.axel_min_scale_factor, settings.axel_max_scale_factor, settings.axel_bias, settings.axel_sko);
@@ -96,35 +133,8 @@ classdef Bins
             obj.wy = Gyroscope(settings.axel_min_scale_factor, settings.axel_max_scale_factor, settings.axel_bias, settings.axel_sko);
             obj.wz = Gyroscope(settings.axel_min_scale_factor, settings.axel_max_scale_factor, settings.axel_bias, settings.axel_sko);
             
-            % Fill solution arrays with zeros
-            obj.Ax_n = zeros(1, settings.simulation_time);
-            obj.Ay_n = zeros(1, settings.simulation_time);
-            obj.Az_n = zeros(1, settings.simulation_time);
-            
-            obj.Ax_n(1) = 0;
-            obj.Ay_n(1) = 0;
-            obj.Az_n(1) = 0;
-            
-            obj.An = [];
-            
-            obj.Vx_n = zeros(1, settings.simulation_time);
-            obj.Vy_n = zeros(1, settings.simulation_time);
-            obj.Vz_n = zeros(1, settings.simulation_time);
-            
-            % Set trajectory params
-            obj.k = 2 * pi / settings.simulation_time;
-            
-            obj.R_real  = zeros(1, settings.simulation_time);
-            obj.fi_real = zeros(1, settings.simulation_time);
-            obj.la_real = zeros(1, settings.simulation_time);
-            
-            obj.vx_real = zeros(1, settings.simulation_time);
-            obj.vy_real = zeros(1, settings.simulation_time);
-            obj.vz_real = zeros(1, settings.simulation_time);
-            
-            obj.wx_real = zeros(1, settings.simulation_time);
-            obj.wy_real = zeros(1, settings.simulation_time);
-            obj.wz_real = zeros(1, settings.simulation_time);
+            % Set real trajectory params
+            obj.k = 2 * pi / settings.revolution_time;
         end
         
         function obj = calibration(obj)
@@ -215,46 +225,8 @@ classdef Bins
             obj.az = obj.az.set_calibrated_params(Az_z_bias, Az_scale_f);
             
             if (obj.settings.log_calibration_results_flag)
-                obj.axels_calibration_results_file = fopen(obj.settings.axels_calibration_results_file_path, 'w+');
-                obj.gyros_calibration_results_file = fopen(obj.settings.gyros_calibration_results_file_path, 'w+');
-                
-                fprintf(obj.axels_calibration_results_file, "%s\n", "Real axels biases:");
-                fprintf(obj.axels_calibration_results_file, "Ax: %6f\n",   obj.ax.bias);
-                fprintf(obj.axels_calibration_results_file, "Ay: %6f\n",   obj.ay.bias);
-                fprintf(obj.axels_calibration_results_file, "Az: %6f\n\n", obj.az.bias);
-
-                fprintf(obj.axels_calibration_results_file, "%s\n", "Real axels scale factor:");
-                fprintf(obj.axels_calibration_results_file, "Ax: %6f\n",   obj.ax.scale_factor);
-                fprintf(obj.axels_calibration_results_file, "Ay: %6f\n",   obj.ay.scale_factor);
-                fprintf(obj.axels_calibration_results_file, "Az: %6f\n\n", obj.az.scale_factor);
-                
-                fprintf(obj.axels_calibration_results_file, "%s\n", "Calculated axels biases:");
-                fprintf(obj.axels_calibration_results_file, "Ax: %6f\n",   obj.ax.calculated_bias);
-                fprintf(obj.axels_calibration_results_file, "Ay: %6f\n",   obj.ay.calculated_bias);
-                fprintf(obj.axels_calibration_results_file, "Az: %6f\n\n", obj.az.calculated_bias);
-
-                fprintf(obj.axels_calibration_results_file, "%s\n", "Calculated axels scale factor:");
-                fprintf(obj.axels_calibration_results_file, "Ax: %6f\n",   obj.ax.calculated_scale_factor);
-                fprintf(obj.axels_calibration_results_file, "Ay: %6f\n",   obj.ay.calculated_scale_factor);
-                fprintf(obj.axels_calibration_results_file, "Az: %6f\n\n", obj.az.calculated_scale_factor);
-
-                fprintf(obj.axels_calibration_results_file, "%s\n", "--------------------------------------------------");
-
-                fprintf(obj.axels_calibration_results_file, "%s\n", "Bias calibration error:");
-                fprintf(obj.axels_calibration_results_file, "Ax: |%6f - %6f| = %6f\n", ...
-                    obj.ax.bias, obj.ax.calculated_bias, abs(obj.ax.bias - obj.ax.calculated_bias));
-                fprintf(obj.axels_calibration_results_file, "Ay: |%6f - %6f| = %6f\n", ...
-                    obj.ay.bias, obj.ay.calculated_bias, abs(obj.ay.bias - obj.ay.calculated_bias));
-                fprintf(obj.axels_calibration_results_file, "Az: |%6f - %6f| = %6f\n\n", ...
-                    obj.az.bias, obj.az.calculated_bias, abs(obj.az.bias - obj.az.calculated_bias));
-
-                fprintf(obj.axels_calibration_results_file, "%s\n", "Scale factor calibration error:");
-                fprintf(obj.axels_calibration_results_file, "Ax: |%6f - %6f| = %6f\n", ...
-                    obj.ax.scale_factor, obj.ax.calculated_scale_factor, abs(obj.ax.scale_factor - obj.ax.calculated_scale_factor));
-                fprintf(obj.axels_calibration_results_file, "Ay: |%6f - %6f| = %6f\n", ...
-                    obj.ay.scale_factor, obj.ay.calculated_scale_factor, abs(obj.ay.scale_factor - obj.ay.calculated_scale_factor));
-                fprintf(obj.axels_calibration_results_file, "Az: |%6f - %6f| = %6f\n\n", ...
-                    obj.az.scale_factor, obj.az.calculated_scale_factor, abs(obj.az.scale_factor - obj.az.calculated_scale_factor));
+                obj = obj.log_accels_calibration_results_to_file_();
+                obj = obj.log_gyros_calibration_results_to_file_();
                 
                 fclose(obj.axels_calibration_results_file);
                 fclose(obj.gyros_calibration_results_file);
@@ -309,81 +281,283 @@ classdef Bins
                 obj = obj.calibration();
             end
             
-            % Solutions arrays initialization step
-            obj = obj.initialize_solutions_arrays_();
+            obj = obj.get_real_telemetry_();
             
-            obj = obj.generate_trajectory_();
+            % Ideal telemetry generation step
+            obj = obj.generate_telemetry_();
             
             % Main cycle
-%             for i=2:obj.settings.simulation_iterations
-%                 
-%             end
+            obj.Sy_n(1) = obj.R_generated(1);
+            for i=2:obj.settings.simulation_iterations
+                obj = obj.calculate_ort_and_nav_params_(i);
+            end
+            
+            disp('Calculations is over successfully!')
+            
+            obj = obj.print_calculated_trajectory_();
+            obj = obj.print_trajectory_on_map_();
             
             % Log solution results & errors in file
             if (obj.settings.log_algorithm_solutions_flag)
-                obj = obj.log_solution_to_file_();
+%                 obj = obj.log_solution_to_file_();
             end
             
             % Print graphs
-%             if (obj.settings.display_solutions_flag)
-%                 obj.set_plot_parameters_();
-%                 
-%                 if (obj.settings.subplot_print_flag)
-%                     % Print solution on one subplot
-%                     obj.print_solutions_sub_plot_();
-%                 else
-%                     % Print solution on several plots
-%                     obj.print_solution_single_plot_();
-%                 end
-%             end
+            if (obj.settings.display_solutions_flag)
+                obj = obj.set_plot_parameters_();
+                
+                if (obj.settings.subplot_print_flag)
+                    % Print solution on one subplot
+                    obj = obj.print_solutions_sub_plot_();
+                else
+                    % Print solution on several plots
+                    obj = obj.print_solution_single_plot_();
+                end
+            end
         end
     end
     
     methods (Access = 'private')
-        function obj = initialize_solutions_arrays_(obj)
-            obj.Ax_n = zeros(1, obj.settings.simulation_time);
-            obj.Ay_n = zeros(1, obj.settings.simulation_time);
-            obj.Az_n = zeros(1, obj.settings.simulation_time);
-            
-            obj.Ax_n(1) = 0;
-            obj.Ay_n(1) = 0;
-            obj.Az_n(1) = 0;
+        % Solution (main) function
+        function obj = calculate_ort_and_nav_params_(obj, i)
+            % Get current g array in SSK and NSSK
+            gn = [0, obj.get_current_g_(obj.R_generated(i)), 0];
 
-            obj.Vx_n = zeros(1, obj.settings.simulation_time);
-            obj.Vy_n = zeros(1, obj.settings.simulation_time);
-            obj.Vz_n = zeros(1, obj.settings.simulation_time);
-            
-            obj.Vx_n(1) = 0;
-            obj.Vy_n(1) = 0;
-            obj.Vz_n(1) = 0;
-            
-            obj.Wx_n = zeros(1, obj.settings.simulation_time);
-            obj.Wy_n = zeros(1, obj.settings.simulation_time);
-            obj.Wz_n = zeros(1, obj.settings.simulation_time);
-            
-            obj.Wx_n(1) = 0;
-            obj.Wy_n(1) = 0;
-            obj.Wz_n(1) = 0;
-            
-            obj.Fx_n = zeros(1, obj.settings.simulation_time);
-            obj.Fy_n = zeros(1, obj.settings.simulation_time);
-            obj.Fz_n = zeros(1, obj.settings.simulation_time);
+            % Get accelerations in SSK frame
+            obj.Ax_b(i) = obj.ax.measure(obj.Ax_generated(i));
+            obj.Ay_b(i) = obj.ay.measure(obj.Ay_generated(i));
+            obj.Az_b(i) = obj.az.measure(obj.Az_generated(i));
 
-            obj.Fx_n(1) = 0;
-            obj.Fy_n(1) = 0;
-            obj.Fz_n(1) = 0;
+            Ab = [obj.Ax_b(i); obj.Ay_b(i); obj.Az_b(i)];
+
+            obj.Fx_b(i) = obj.wx.measure(obj.Wx_generated(i));        
+            obj.Fy_b(i) = obj.wx.measure(obj.Wy_generated(i));
+            obj.Fz_b(i) = obj.wx.measure(obj.Wz_generated(i));
+
+            Fb = [obj.Fx_b(i); obj.Fy_b(i); obj.Fz_b(i)];
+
+            obj.Vx_b(i) = obj.Vx_generated(i);
+            obj.Vy_b(i) = obj.Vy_generated(i);
+            obj.Vz_b(i) = obj.Vz_generated(i);
+
+            Vb = [obj.Vx_b(i), obj.Vy_b(i), obj.Vz_b(i)];
+
+            % Gyros compensation
+            % ----
+
+            % Axels compensation
+            % ----
+
+            % Recalculate G quat
+%             A = obj.make_4x4_skew_matrinx_from_vector_([... 
+%                 obj.settings.U * cos(obj.settings.phi) * obj.settings.dt, ...
+%                 obj.settings.U * sin(obj.settings.phi) * obj.settings.dt, ...
+%                 0]);
+            A = obj.make_4x4_skew_matrinx_from_vector_([ ...
+                obj.settings.U * sin(obj.teta) * cos(obj.psi)   * obj.settings.dt, ...
+                obj.settings.U * cos(obj.teta) * cos(obj.gamma) * obj.settings.dt, ...
+                obj.settings.U * sin(obj.psi)  * sin(obj.gamma) * obj.settings.dt]);
+            dG = obj.settings.E + 0.5 * A + 0.25 * A^2;
+            obj.G = (dG * obj.G')';
+
+            % Recalculate main quat
+            A = obj.make_4x4_skew_matrinx_from_vector_(Fb);
+            dL = obj.settings.E + 0.5 * A + 0.25 * A^2;
+            obj.L = (dL * obj.L')';
+
+            % Project IMU info to NSSK
+            An = quatrotate(obj.L, Ab');
+            Fn = quatrotate(obj.L, Fb');
+            Vn = quatrotate(obj.L, Vb);
+
+            M = quat2rotm(obj.L);
+
+            m0 = sqrt(M(3,1)^2 + M(3,3)^2);
+
+%             gamma(i)  = gamma(1) + atan2(M(3,2), m0);
+%             teta(i)   = teta(1)  + atan2(M(1,2), M(2,2));
+%             psi(i)    = psi(1)   - atan2(M(3,1), M(3,3));
+% 
+%             obj.Vx_n(i) = obj.Vx_n(i-1) + (An(1) - gn(1)) * obj.settings.dt;
+%             obj.Vy_n(i) = obj.Vy_n(i-1) + (An(2) - gn(2)) * obj.settings.dt;
+%             obj.Vz_n(i) = obj.Vz_n(i-1) + (An(3) - gn(3)) * obj.settings.dt;
+            
+            obj.Sx_n(i) = obj.Sx_n(i - 1) + Vn(1) * obj.settings.dt;
+            obj.Sy_n(i) = obj.Sy_n(i - 1) + Vn(2) * obj.settings.dt;
+            obj.Sz_n(i) = obj.Sz_n(i - 1) + Vn(3) * obj.settings.dt;
+            
+            if (mod(i, obj.settings.sample_rate * 60) == 0) && (i ~= obj.settings.sample_rate * 60)
+                c = ceil(i / obj.settings.sample_rate / 60);
+                Sn = [obj.Sx_n(i), obj.Sy_n(i), obj.Sz_n(i)];
+
+                Sg = quatrotate(obj.G, Sn);
+
+%                 lla = eci2lla([Sg(1), Sg(3), Sg(2)], obj.t_real(c, :), 'IAU-2000/2006');
+% 
+%                 obj.Sx_g(c) = lla(1);
+%                 obj.Sy_g(c) = lla(3);
+%                 obj.Sz_g(c) = lla(2);
+
+                obj.Sx_g(c) = Sg(1);
+                obj.Sy_g(c) = Sg(2);
+                obj.Sz_g(c) = Sg(3);
+                
+                lla = eci2lla([Sg(1), Sg(3), Sg(2) - obj.settings.Rad], obj.t_real(c, :), 'IAU-2000/2006');
+
+                obj.phi(c) = lla(1);
+                obj.la(c)  = lla(2);
+                obj.h(c)   = lla(3);
+            end
+            
+            obj = obj.print_progress_bar_(i);
         end
-        function mtr = make_4x4_skew_matrinx_from_vector_(v)
+        
+        % Model functions
+        function obj = initialize_model_arrays_(obj)
+            % GSK solutions initialization
+            obj.phi = zeros(1, obj.settings.revolution_time / obj.settings.sample_rate / 60);
+            obj.la  = zeros(1, obj.settings.revolution_time / obj.settings.sample_rate / 60);
+            obj.h   = zeros(1, obj.settings.revolution_time / obj.settings.sample_rate / 60);
+            
+            % NSSK params initialization
+            obj.Ax_n = zeros(1, obj.settings.simulation_iterations);
+            obj.Ay_n = zeros(1, obj.settings.simulation_iterations);
+            obj.Az_n = zeros(1, obj.settings.simulation_iterations);
+            
+            obj.Ax_n(1) = obj.settings.Ax_n_0;
+            obj.Ay_n(1) = obj.settings.Ay_n_0;
+            obj.Az_n(1) = obj.settings.Az_n_0;
+
+            obj.Vx_n = zeros(1, obj.settings.simulation_iterations);
+            obj.Vy_n = zeros(1, obj.settings.simulation_iterations);
+            obj.Vz_n = zeros(1, obj.settings.simulation_iterations);
+            
+            obj.Vx_n(1) = obj.settings.Vx_n_0;
+            obj.Vy_n(1) = obj.settings.Vy_n_0;
+            obj.Vz_n(1) = obj.settings.Vz_n_0;
+            
+            obj.Wx_n = zeros(1, obj.settings.simulation_iterations);
+            obj.Wy_n = zeros(1, obj.settings.simulation_iterations);
+            obj.Wz_n = zeros(1, obj.settings.simulation_iterations);
+            
+            obj.Wx_n(1) = obj.settings.Wx_n_0;
+            obj.Wy_n(1) = obj.settings.Wy_n_0;
+            obj.Wz_n(1) = obj.settings.Wz_n_0;
+            
+            obj.Fx_n = zeros(1, obj.settings.simulation_iterations);
+            obj.Fy_n = zeros(1, obj.settings.simulation_iterations);
+            obj.Fz_n = zeros(1, obj.settings.simulation_iterations);
+
+            obj.Fx_n(1) = obj.settings.Fx_n_0;
+            obj.Fy_n(1) = obj.settings.Fy_n_0;
+            obj.Fz_n(1) = obj.settings.Fz_n_0;
+
+            obj.Sx_n = zeros(1, obj.settings.simulation_iterations);
+            obj.Sy_n = zeros(1, obj.settings.simulation_iterations);
+            obj.Sz_n = zeros(1, obj.settings.simulation_iterations);
+
+            obj.Sx_n(1) = 0;
+            obj.Sy_n(1) = obj.settings.Rad + obj.settings.h_min + (obj.settings.h_max - obj.settings.h_min) / 2;
+            obj.Sz_n(1) = 0; 
+
+            obj.Sx_r = zeros(1, obj.settings.revolution_time / obj.settings.sample_rate / 60);
+            obj.Sy_r = zeros(1, obj.settings.revolution_time / obj.settings.sample_rate / 60);
+            obj.Sz_r = zeros(1, obj.settings.revolution_time / obj.settings.sample_rate / 60);
+            
+            obj.Sx_g = zeros(1, obj.settings.revolution_time / obj.settings.sample_rate / 60);
+            obj.Sy_g = zeros(1, obj.settings.revolution_time / obj.settings.sample_rate / 60);
+            obj.Sz_g = zeros(1, obj.settings.revolution_time / obj.settings.sample_rate / 60);
+
+            eci = lla2eci([51.55, 36.76, 0],[2020, 05, 24, 18, 03, 00]);
+            
+            obj.Sx_g(1) = eci(1);
+            obj.Sy_g(1) = obj.settings.Rad + obj.settings.h_min + (obj.settings.h_max - obj.settings.h_min) / 2;
+            obj.Sz_g(1) = eci(2); 
+            
+            % SSK dynamic params initialization
+            obj.Ax_b = zeros(1, obj.settings.simulation_iterations);
+            obj.Ay_b = zeros(1, obj.settings.simulation_iterations);
+            obj.Az_b = zeros(1, obj.settings.simulation_iterations);
+            
+            obj.Ax_b(1) = obj.settings.Ax_b_0;
+            obj.Ay_b(1) = obj.settings.Ay_b_0;
+            obj.Az_b(1) = obj.settings.Az_b_0;
+
+            obj.Vx_b = zeros(1, obj.settings.simulation_iterations);
+            obj.Vy_b = zeros(1, obj.settings.simulation_iterations);
+            obj.Vz_b = zeros(1, obj.settings.simulation_iterations);
+            
+            obj.Vx_b(1) = obj.settings.Vx_b_0;
+            obj.Vy_b(1) = obj.settings.Vy_b_0;
+            obj.Vz_b(1) = obj.settings.Vz_b_0;
+            
+            obj.Wx_b = zeros(1, obj.settings.simulation_iterations);
+            obj.Wy_b = zeros(1, obj.settings.simulation_iterations);
+            obj.Wz_b = zeros(1, obj.settings.simulation_iterations);
+            
+            obj.Wx_b(1) = obj.settings.Wx_b_0;
+            obj.Wy_b(1) = obj.settings.Wy_b_0;
+            obj.Wz_b(1) = obj.settings.Wz_b_0;
+            
+            obj.Fx_b = zeros(1, obj.settings.simulation_iterations);
+            obj.Fy_b = zeros(1, obj.settings.simulation_iterations);
+            obj.Fz_b = zeros(1, obj.settings.simulation_iterations);
+
+            obj.Fx_b(1) = obj.settings.Fx_b_0;
+            obj.Fy_b(1) = obj.settings.Fy_b_0;
+            obj.Fz_b(1) = obj.settings.Fz_b_0;
+
+            % Fill generated dynamic parameters arrays with zeros
+            obj.R_generated  = zeros(1, obj.settings.simulation_iterations);
+            obj.fi_generated = zeros(1, obj.settings.simulation_iterations);
+            obj.la_generated = zeros(1, obj.settings.simulation_iterations);
+
+            obj.Ax_generated = zeros(1, obj.settings.simulation_iterations);
+            obj.Ay_generated = zeros(1, obj.settings.simulation_iterations);
+            obj.Az_generated = zeros(1, obj.settings.simulation_iterations);
+            
+            obj.Vx_generated = zeros(1, obj.settings.simulation_iterations);
+            obj.Vy_generated = zeros(1, obj.settings.simulation_iterations);
+            obj.Vz_generated = zeros(1, obj.settings.simulation_iterations);
+            
+            obj.Wx_generated = zeros(1, obj.settings.simulation_iterations);
+            obj.Wy_generated = zeros(1, obj.settings.simulation_iterations);
+            obj.Wz_generated = zeros(1, obj.settings.simulation_iterations);
+            
+            % Fill real dynamic parameters arrays with zeros
+            obj.R_real  = zeros(1, obj.settings.revolution_time / obj.settings.sample_rate / 60);
+            obj.fi_real = zeros(1, obj.settings.revolution_time / obj.settings.sample_rate / 60);
+            obj.la_real = zeros(1, obj.settings.revolution_time / obj.settings.sample_rate / 60);
+            obj.t_real  = zeros(obj.settings.revolution_time / obj.settings.sample_rate / 60, 6);
+            
+            obj.Ax_real = zeros(1, obj.settings.simulation_iterations);
+            obj.Ay_real = zeros(1, obj.settings.simulation_iterations);
+            obj.Az_real = zeros(1, obj.settings.simulation_iterations);
+            
+            obj.Vx_real = zeros(1, obj.settings.simulation_iterations);
+            obj.Vy_real = zeros(1, obj.settings.simulation_iterations);
+            obj.Vz_real = zeros(1, obj.settings.simulation_iterations);
+            
+            obj.Wx_real = zeros(1, obj.settings.simulation_iterations);
+            obj.Wy_real = zeros(1, obj.settings.simulation_iterations);
+            obj.Wz_real = zeros(1, obj.settings.simulation_iterations);
+        end
+        function mtr = make_4x4_skew_matrinx_from_vector_(obj, v)
             mtr = [ 0, -v(1), -v(2),  -v(3);
                   v(1),  0,   v(3),  -v(2);
                   v(2), -v(3),   0,   v(1);
                   v(3),  v(2), v(1),  0];
         end
-        function mtr = make_3x3_skew_matrinx_from_vector_(v)
+        function mtr = make_3x3_skew_matrinx_from_vector_(obj, v)
             mtr = [0 -v(3) v(2);
                    v(3) 0 -v(1);
                   -v(2) v(3) 0];
-        end        
+        end
+        function g   = get_current_g_(obj, R)
+            g = obj.settings.M * obj.settings.G / (R ^ 2);
+        end
+        
+        % File log functions
         function obj = log_solution_to_file_(obj)
 %             fe = fopen(obj.settings.algorithm_results_errors_file_path, 'w+');
 
@@ -402,32 +576,80 @@ classdef Bins
 %             fprintf(fe, "psi:   |%6f - %6f| = %6f [ãðàä]\n", U * sin(obj.phi) * obj.settings.simulation_time * dt * 57.3, obj.psi(obj.settings.simulation_time) * 57.3, abs(obj.settings.U * sin(obj.phi) * obj.settings.simulation_time * dt * 57.3 - obj.psi(obj.settings.simulation_time) * 57.3));
 %             fprintf(fe, "teta:  |%6f - %6f| = %6f [ãðàä]\n", 0, obj.teta(obj.settings.simulation_time) * 57.3, abs(0 - obj.teta(obj.settings.simulation_time) * 57.3));
 %             fprintf(fe, "gamma: |%6f - %6f| = %6f [ãðàä]\n\n", U * cos(obj.phi) * obj.settings.simulation_time * dt * 57.3, obj.gamma(obj.settings.simulation_time) * 57.3, abs(obj.settings.U * cos(obj.phi) * obj.settings.simulation_time * dt * 57.3 - obj.gamma(obj.settings.simulation_time) * 57.3));
-
+            fprintf('Solution errors were written to the file: %s\n', obj.settings.algorithm_results_errors_file_path)
         end
+        function obj = log_accels_calibration_results_to_file_(obj)
+            obj.axels_calibration_results_file = fopen(obj.settings.axels_calibration_results_file_path, 'w+');
+
+            fprintf(obj.axels_calibration_results_file, "%s\n", "Real axels biases:");
+            fprintf(obj.axels_calibration_results_file, "Ax: %6f\n",   obj.ax.bias);
+            fprintf(obj.axels_calibration_results_file, "Ay: %6f\n",   obj.ay.bias);
+            fprintf(obj.axels_calibration_results_file, "Az: %6f\n\n", obj.az.bias);
+
+            fprintf(obj.axels_calibration_results_file, "%s\n", "Real axels scale factor:");
+            fprintf(obj.axels_calibration_results_file, "Ax: %6f\n",   obj.ax.scale_factor);
+            fprintf(obj.axels_calibration_results_file, "Ay: %6f\n",   obj.ay.scale_factor);
+            fprintf(obj.axels_calibration_results_file, "Az: %6f\n\n", obj.az.scale_factor);
+
+            fprintf(obj.axels_calibration_results_file, "%s\n", "Calculated axels biases:");
+            fprintf(obj.axels_calibration_results_file, "Ax: %6f\n",   obj.ax.calculated_bias);
+            fprintf(obj.axels_calibration_results_file, "Ay: %6f\n",   obj.ay.calculated_bias);
+            fprintf(obj.axels_calibration_results_file, "Az: %6f\n\n", obj.az.calculated_bias);
+
+            fprintf(obj.axels_calibration_results_file, "%s\n", "Calculated axels scale factor:");
+            fprintf(obj.axels_calibration_results_file, "Ax: %6f\n",   obj.ax.calculated_scale_factor);
+            fprintf(obj.axels_calibration_results_file, "Ay: %6f\n",   obj.ay.calculated_scale_factor);
+            fprintf(obj.axels_calibration_results_file, "Az: %6f\n\n", obj.az.calculated_scale_factor);
+
+            fprintf(obj.axels_calibration_results_file, "%s\n", "--------------------------------------------------");
+
+            fprintf(obj.axels_calibration_results_file, "%s\n", "Bias calibration error:");
+            fprintf(obj.axels_calibration_results_file, "Ax: |%6f - %6f| = %6f\n", ...
+                obj.ax.bias, obj.ax.calculated_bias, abs(obj.ax.bias - obj.ax.calculated_bias));
+            fprintf(obj.axels_calibration_results_file, "Ay: |%6f - %6f| = %6f\n", ...
+                obj.ay.bias, obj.ay.calculated_bias, abs(obj.ay.bias - obj.ay.calculated_bias));
+            fprintf(obj.axels_calibration_results_file, "Az: |%6f - %6f| = %6f\n\n", ...
+                obj.az.bias, obj.az.calculated_bias, abs(obj.az.bias - obj.az.calculated_bias));
+
+            fprintf(obj.axels_calibration_results_file, "%s\n", "Scale factor calibration error:");
+            fprintf(obj.axels_calibration_results_file, "Ax: |%6f - %6f| = %6f\n", ...
+                obj.ax.scale_factor, obj.ax.calculated_scale_factor, abs(obj.ax.scale_factor - obj.ax.calculated_scale_factor));
+            fprintf(obj.axels_calibration_results_file, "Ay: |%6f - %6f| = %6f\n", ...
+                obj.ay.scale_factor, obj.ay.calculated_scale_factor, abs(obj.ay.scale_factor - obj.ay.calculated_scale_factor));
+            fprintf(obj.axels_calibration_results_file, "Az: |%6f - %6f| = %6f\n\n", ...
+                obj.az.scale_factor, obj.az.calculated_scale_factor, abs(obj.az.scale_factor - obj.az.calculated_scale_factor));
+        end
+        function obj = log_gyros_calibration_results_to_file_(obj)
+            obj.gyros_calibration_results_file = fopen(obj.settings.gyros_calibration_results_file_path, 'w+');
+        end
+        
+        % Plot functions
         function obj = set_plot_parameters_(obj)
-            obj.plot_parameter = [obj.Vx_n,       obj.Vy_n,       obj.Vz_n,       obj.psi,      obj.teta,      obj.gamma,      obj.h];
-            obj.plot_tile      = ['Vx_n',         'Vy_n',         'Vz_n',         'Psi',        'Teta',        'Gamma',        'H'];
-            obj.plot_x_label   = ['t, [s]',       't, [s]',       't, [s]',       't, [s]',     't, [s]',      't, [s]',       't, [s]'];
-            obj.plot_y_label   = ['Vx_n, [ms/s]', 'Vy_n, [ms/s]', 'Vz_n, [ms/s]', 'Psi, [rad]', 'Teta, [rad]', 'Gamma, [rad]', 'H, [m]'];
-            obj.plot_solution_path = [];
-            for i = 1:length(obj.plot_tile)
-                obj.plot_solution_path = [obj.plot_solution_path, join(['/', obj.plot_tile, '.jpg'])];
+            obj.plot_parameter = {obj.Ax_b,       obj.Ay_b,       obj.Az_b,       };%obj.psi,      obj.teta,      obj.gamma,      obj.h};
+            obj.plot_tile      = {'Vx_n',         'Vy_n',         'Vz_n',         'Psi',        'Teta',        'Gamma',        'H'};
+            obj.plot_x_label   = {'t, [s]',       't, [s]',       't, [s]',       't, [s]',     't, [s]',      't, [s]',       't, [s]'};
+            obj.plot_y_label   = {'Vx_n, [ms/s]', 'Vy_n, [ms/s]', 'Vz_n, [ms/s]', 'Psi, [rad]', 'Teta, [rad]', 'Gamma, [rad]', 'H, [m]'};
+            obj.plot_solution_path = {};
+            for i = 1:length(obj.plot_parameter)
+                obj.plot_solution_path{i} = join(['/', obj.plot_tile{i}, '.jpg']);
             end
         end
         function obj = print_solution_single_plot_(obj)
             for i = 1:length(obj.plot_parameter)
-                figure(1);
-                plot(obj.settings.simulation_time, obj.plot_parameter(i));
+                figure();
+                plot(1:obj.settings.simulation_time, obj.plot_parameter{i}(obj.settings.sample_rate:obj.settings.sample_rate:end));
                 set(gca, 'fontsize', obj.settings.font_size);
                 set(gcf, 'Position', get(0, 'Screensize'));
-                title(obj.plot_tile(i));
-                xlabel(obj.plot_x_label(i));
-                ylabel(obj.plot_y_label(i));
+                title(obj.plot_tile{i});
+                xlabel(obj.plot_x_label{i});
+                ylabel(obj.plot_y_label{i});
                 grid on;
-                saveas(gcf, join([solution_folder_name, obj.plot_solution_path]));                
+                saveas(gcf, join([obj.settings.solution_folder_name, obj.plot_solution_path{i}]));                
             end
         end
         function obj = print_solutions_sub_plot_(obj)
+            disp('Plotting solution in single plot ...');
+            % Calculate rows and cols count of subplot
             total_plots = length(obj.plot_parameter);
             delimeters = [];
             for i = 1:total_plots
@@ -439,9 +661,11 @@ classdef Bins
             columns_count = delimeters(1 + round(length(delimeters) / 2));
             rows_count = total_plots / columns_count;
             
+            % Plot graphs
+            figure();
             for i = 1:total_plots
                 subplot(rows_count, columns_count, i);
-                plot(obj.settings.simulation_time, obj.plot_parameter(i));
+                plot(1:obj.settings.simulation_time, obj.plot_parameter{i}(obj.settings.sample_rate:obj.settings.sample_rate:end));
                 set(gca, 'fontsize', obj.settings.font_size);
                 title(obj.plot_tile(i));
                 xlabel(obj.plot_x_label(i));
@@ -449,66 +673,104 @@ classdef Bins
                 grid on;
             end
         end
-        function obj = generate_trajectory_(obj)
+        function obj = print_calculated_trajectory_(obj)
+            figure();
+            hold on;
+            plot3(obj.Sx_n, obj.Sy_n, obj.Sz_n);
+            grid on;
+            hold on;
+            plot3(obj.Sx_g, obj.Sz_g, obj.Sy_g);
+            grid on;
+            hold on;
+            plot3(obj.Sx_r, obj.Sz_r, obj.Sy_r);
+            grid on;
+            xlabel('X');
+            ylabel('Y');
+            zlabel('Z');
+            legend(...
+                'Object trajectory in NSSK', ...
+                'Object trajectory in GSK', ...
+                'ISS trajectory in GSK')
+        end
+        function obj = print_trajectory_on_map_(obj)
+            figure();
+            geoplot(obj.gpv.Latitude,obj.gpv.Longitude, '+','LineWidth',2)
+            hold on;
+            geoplot(obj.phi, obj.la, '+r','LineWidth',2)
+        end
+        
+        % Telemetry funtions
+        function obj = generate_telemetry_(obj)
+            disp('Generating ideal (real) telemetry ...')
             h_med = (obj.settings.h_max - obj.settings.h_min) / 2;
             v_med = (obj.settings.v_max - obj.settings.v_min) / 2;
-            for i = 1:obj.settings.simulation_time
-                obj.R_real(i)  = obj.settings.Rad + obj.settings.h_min + h_med * sin(i * obj.k);
-                
-                obj.vx_real(i) = obj.settings.h_min - v_med * sin(i * obj.k);
-                obj.vy_real(i) = 0;
-                obj.vz_real(i) = 0;
+            
+            % Spacecraft angular velocity of rotation about his 'Z' axis [rad/sec]
+            wx = 2 * pi / obj.settings.revolution_iterations; 
+            
+            for i = 1:obj.settings.simulation_iterations
+                obj.R_generated(i)  = obj.settings.Rad + obj.settings.h_min + h_med + h_med * sin(i * obj.k);
+
+                obj.Vz_generated(i) = obj.settings.v_min + v_med - v_med * sin(i * obj.k);
+                obj.Ay_generated(i) = obj.get_current_g_(obj.R_generated(i));
+                obj.Wx_generated(i) = - wx;
+            end
+            disp('Telemetry generated successfully.')
+            
+            if (obj.settings.plot_trajectoey_simulation_flag)
+                figure(1);
+                subplot(1, 2, 1);
+                plot(1:obj.settings.simulation_iterations, obj.R_generated);
+                title('Distance from the center of the Earth to the spacecraft')
+                xlabel('time, [sec]');
+                ylabel('R, [m]');
+                grid on;
+                subplot(1, 2, 2);
+                plot(1:obj.settings.simulation_iterations, obj.Vz_generated);
+                title('Linear speed of the spacecraft')
+                xlabel('time, [sec]');
+                ylabel('Linear vel (X axis), [m/sec]');
+                grid on;
             end
         end
-        function obj = calculate_ort_and_nav_params_(obj, i)
-            gn = quatrotate(L, g);
-
-            % Get accelerations in SSK frame
-            obj.Ax_b = obj.ax.measure(4);
-            obj.Ay_b = obj.ay.measure(4);
-            obj.Az_b = obj.az.measure(4);
-
-            Ab = [obj.Ax_b; obj.Ay_b; obj.Az_b];
-
-            Fx_b = normrnd(Ux_err(psi_err, teta_err, gamma_err) * dt, wSigma);
-            Fy_b = normrnd(Uy_err(psi_err, teta_err, gamma_err) * dt, wSigma);
-            Fz_b = normrnd(Uz_err(psi_err, teta_err, gamma_err) * dt, wSigma);
-
-            Fb = [Fx_b; Fy_b; Fz_b];
-
-            % Gyros compensation
-            % ----
-
-            % Axels compensation
-            % ----
-
-            % Recalculate G quat
-            A = make4SkewMatrix([U * cos(phi) * dt; U * sin(phi) * dt; 0]);
-            dG = E + 0.5 * A + 0.25 * A^2;
-            G = (dG * G')';
-
-            % Recalculate main quat
-            A = make4SkewMatrix(Fb);
-            dL = E + 0.5 * A + 0.25 * A^2;
-            L = (dL * L')';
-
-            % Project IMU info to NSSK
-            An = quatrotate(L, Ab');
-            Fn = quatrotate(L, Fb');
-
-            M = quat2rotm(L);
-
-            m0 = sqrt(M(3,1)^2 + M(3,3)^2);
-
-            gamma(i)  = gamma(1) + atan2(M(3,2), m0);
-            teta(i)   = teta(1)  + atan2(M(1,2),M(2,2));
-            psi(i)    = psi(1)   - atan2(M(3,1),M(3,3));
-
-            Vx_n(i) = Vx_n(i-1) + (An(1) - gn(1)) * dt;
-            Vy_n(i) = Vy_n(i-1) + (An(2) - gn(2)) * dt;
-            Vz_n(i) = Vz_n(i-1) + (An(3) - gn(3)) * dt;
-
-            h(i) = h(i-1) + Vy_n(i) * dt;
+        % Open real telemetry    
+        function obj = get_real_telemetry_(obj)
+            disp('Try to get ISS telemetry ...');
+            telemetry_file = fopen(obj.settings.path_to_telemetry_file);
+            
+            i = 1;
+            while ~feof(telemetry_file)
+                string = fgetl(telemetry_file);
+                line = split(string);
+                a = split(line{1}, '/');
+                b = split(line{2}, ':');
+                obj.t_real(i, :) = str2num(join(["20" + a{1}, a{2:end}, b{:}], " "));
+                obj.R_real(i)  = str2double(line{8}) * obj.settings.Rad;
+                obj.fi_real(i) = str2double(line{6});
+                obj.la_real(i) = str2double(line{7});
+                
+                eci = lla2eci([obj.fi_real(i), obj.la_real(i), obj.R_real(i) - obj.settings.Rad], obj.t_real(i, :));
+                
+                obj.Sx_r(i) = eci(1);
+                obj.Sy_r(i) = eci(2);
+                obj.Sz_r(i) = eci(3);
+                
+                i = i + 1;
+            end
+            obj.gpv = geopoint();
+            obj.gpv = append(obj.gpv, obj.fi_real, obj.la_real);
+            disp('ISS telemetry getted successfully.');
+        end
+        
+        % Other functions
+        function obj = print_progress_bar_(obj, i)
+            if (mod(i, floor(obj.settings.simulation_iterations / obj.settings.progress_bar_width)) == 0)
+                fprintf(repmat('\b', 1, obj.settings.progress_line_size));
+                obj.settings.progress_bar(obj.settings.progress_bar_counter) = '#';
+                obj.settings.progress_line_size = fprintf('%s\n%d of %d iterations is over (%.2d %%).\n', ...
+                    obj.settings.progress_bar, i, obj.settings.simulation_iterations, floor((obj.settings.progress_bar_counter - 1 ) * 100 / obj.settings.progress_bar_width));
+                obj.settings.progress_bar_counter = obj.settings.progress_bar_counter + 1;
+            end
         end
     end
 end

@@ -34,7 +34,8 @@ classdef Gyroscope
         end
         
         function measured_value = measure(obj, value)
-            measured_value = obj.make_noise(obj, value);
+%             measured_value = obj.make_noise(obj, value);
+            measured_value = value;
         end
     end
 end
