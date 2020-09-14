@@ -4,7 +4,7 @@ classdef ModelSettings
         % ----------------------------------------------------------------------------------------
         gc    =  9.8153;        % Acceleration of gravity       [m/s^2]
         g     = [0, 9.8153, 0]; % Array of 'g' for model        [{m/s^2, m/s^2, m/s^2}]
-        Rad   = 6378245;        % Earth radius                  [m]
+        Rad   = 6371200;        % Earth radius                  [m]
         h_min = 400e3;          % Min height above sea level    [m]
         h_max = 428e3;          % Max height above sea level    [m]
         v_min = 7649.7222;      % Min satellite linear velocity [m/sec]
@@ -13,7 +13,7 @@ classdef ModelSettings
         G     = 6.67430e-11     % Gravitational constant        [m^3/(kg * s^2)]
         U     = 7.29e-5;        % Earth angular velocity        [rad/s]
         phi   = 51.55 / 57.3;   % NSSK start latitude           [rad]        
-        la    = 36.76 / 57.3;   % NSSK start longtitude           [rad]
+        la    = 36.76 / 57.3;   % NSSK start longtitude         [rad]
         gn;                     % Array of g in SSK             [m/sec^2]
         gb;                     % Array of g in NSSK            [m/sec^2]        
         
@@ -51,12 +51,12 @@ classdef ModelSettings
         axel_min_scale_factor = 1.2; 
         axel_max_scale_factor = 1.4;
         axel_bias             = 0.03924;      % Accelerometer bias [g]
-        axel_sko              = 3.3e-4 * 9.8; % Accelerometer bias [g]
+        axel_sko              = 3.3e-4 * 9.8; % Accelerometer sko  [g]
         
         gyro_min_scale_factor = 1.2; 
         gyro_max_scale_factor = 1.4;
-        gyro_bias             = 0.03924;
-        gyro_sko              = 0.03 / 57.3 / 3600;
+        gyro_bias             = 0.03924;            % Gyro bias [rad/sec]
+        gyro_sko              = 0.03 / 57.3 / 3600; % Gyro sko  [rad/sec]
 
         % Programm settings
         % ----------------------------------------------------------------------------------------
@@ -69,7 +69,7 @@ classdef ModelSettings
         display_solutions_flag          = true; % Show solution graphics on screen
         subplot_print_flag              = true; % Print all solutions on one plot 
         log_algorithm_solutions_flag    = true; % Store work resualt of alghorithm in file, save pictures
-        plot_trajectoey_simulation_flag = true; % Print trajectory simulation params on screen
+        plot_trajectory_simulation_flag = true; % Print trajectory simulation params on screen
         
         % Calibration flags
         % ----------------------------------------------------------------------------------------
@@ -100,7 +100,7 @@ classdef ModelSettings
             
             % Time settings
             obj.simulation_time = sim_time;
-            obj.revolution_time = 97 * 60;
+            obj.revolution_time = 93 * 60; % ISS one revolution around the Earth time [s]
             
             obj.sample_rate = sample_rate;
             obj.dt = 1 / sample_rate;
@@ -188,9 +188,9 @@ classdef ModelSettings
             fprintf('Solution log mode:     %d.\n', obj.log_algorithm_solutions_flag);
         end
         
-       function obj = set_plot_trajectoey_simulation_flag(obj, plot_trajectory)
-            obj.plot_trajectoey_simulation_flag = plot_trajectory;
-            fprintf('Plot trajectory mode:  %d.\n', obj.plot_trajectoey_simulation_flag);
+        function obj = set_plot_trajectoey_simulation_flag(obj, plot_trajectory)
+            obj.plot_trajectory_simulation_flag = plot_trajectory;
+            fprintf('Plot trajectory mode:  %d.\n', obj.plot_trajectory_simulation_flag);
         end
     end
 end

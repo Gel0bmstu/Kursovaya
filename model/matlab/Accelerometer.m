@@ -29,7 +29,7 @@ classdef Accelerometer
         end
         
         function val = make_noise(obj, value)
-            val = normrnd(value, obj.sko) * obj.scale_factor / obj.calculated_scale_factor + obj.calculated_bias - obj.bias;
+            val = normrnd(value, obj.sko) * obj.scale_factor / obj.calculated_scale_factor + obj.calculated_bias + obj.bias;
         end
         
         function measured_value = measure(obj, value)
