@@ -12,8 +12,8 @@ classdef ModelSettings
         M     = 5.9726e24;      % Earth mass                    [kg]
         G     = 6.67430e-11     % Gravitational constant        [m^3/(kg * s^2)]
         U     = 7.29e-5;        % Earth angular velocity        [rad/s]
-        phi   = 51.55 / 57.3;   % NSSK start latitude           [rad]        
-        la    = 36.76 / 57.3;   % NSSK start longtitude         [rad]
+        phi   = 51.7275 / 57.3; % NSSK start latitude           [rad]        
+        la    = 36.7559 / 57.3; % NSSK start longtitude         [rad]
         gn;                     % Array of g in SSK             [m/sec^2]
         gb;                     % Array of g in NSSK            [m/sec^2]        
         
@@ -85,6 +85,7 @@ classdef ModelSettings
         axels_calibration_results_file_path; % Path to file which will be stored axels calibration resualts
         algorithm_results_errors_file_path;  % Path to file which will be stored algorithm results errors
         path_to_telemetry_file;              % Path to file which contain real ISS teelemetry
+        path_to_linear_vel_file;             % Path to file which contain real ISS linear velocity
         
         % Progress bar parameters
         % ----------------------------------------------------------------------------------------         
@@ -116,7 +117,8 @@ classdef ModelSettings
             obj.axels_calibration_results_file_path = join([obj.solution_folder_name, '/', obj.axels_calibration_results_file_name]);
             obj.algorithm_results_errors_file_path = join([obj.solution_folder_name, '/', obj.algorithm_results_errors_file_name]);
 
-            obj.path_to_telemetry_file = './telemetry/russia_one_rev.txt';
+            obj.path_to_telemetry_file = './telemetry/russia_one_rev_km.txt';
+            obj.path_to_linear_vel_file = './telemetry/V.txt';
             
             mkdir(obj.solution_folder_name);
             
@@ -126,8 +128,8 @@ classdef ModelSettings
             obj.Az_n_0 = 0;
 
             obj.Vx_n_0 = 0;
-            obj.Vy_n_0 = 0;
-            obj.Vz_n_0 = obj.v_min;
+            obj.Vy_n_0 = obj.v_min;
+            obj.Vz_n_0 = 0;
 
             obj.Wx_n_0 = 0;
             obj.Wy_n_0 = 0;
@@ -139,12 +141,12 @@ classdef ModelSettings
 
             % Navigtion settings in SSK
             obj.Ax_b_0 = 0;
-            obj.Ay_b_0 = obj.M * obj.G / ((obj.Rad + obj.h_min) ^ 2);
-            obj.Az_b_0 = 0;
+            obj.Ay_b_0 = 0;
+            obj.Az_b_0 = obj.M * obj.G / ((obj.Rad + obj.h_min) ^ 2);
 
             obj.Vx_b_0 = 0;
-            obj.Vy_b_0 = 0;
-            obj.Vz_b_0 = obj.v_min;
+            obj.Vy_b_0 = obj.v_min;
+            obj.Vz_b_0 = 0;
 
             obj.Wx_b_0 = 2 * pi / obj.revolution_time;
             obj.Wy_b_0 = 0;

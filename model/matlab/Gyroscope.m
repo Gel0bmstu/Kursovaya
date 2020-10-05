@@ -30,11 +30,11 @@ classdef Gyroscope
         end
         
         function val = make_noise(obj, value)
-            val = normrnd(value, obj.sko) * obj.scale_factor / obj.calculated_scale_factor + obj.calculated_bias - obj.bias;
+            val = normrnd(value, obj.sko) * obj.scale_factor + obj.bias;
         end
         
         function measured_value = measure(obj, value)
-%             measured_value = obj.make_noise(obj, value);
+%             measured_value = obj.make_noise(value);
             measured_value = value;
         end
     end
