@@ -1,0 +1,14 @@
+Mean calibration diff:
+| 0.002909 -  0.002909| =  0.000000, [rad/s]
+
+Real temperature drift factors:
+Temperature:        0.000000, [rad/s]
+Delta temperature:  0.000242, [rad/s]
+
+Calculated temperature drift factors:
+Temperature:        0.000000, [rad/s]
+Delta temperature:  0.000225, [rad/s]
+
+Calculation errors:
+Temperature:       | 0.000000 -  0.000000| =  0.000000, [rad/s]
+Delta temperature: | 0.000242 -  0.000225| =  0.000017, [rad/s]
