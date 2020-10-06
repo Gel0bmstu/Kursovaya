@@ -175,16 +175,7 @@ classdef Bins
 
                 cAz_1(i) = obj.az.measure(gz_1);
                 cAz_2(i) = obj.az.measure(gz_2);
-                
-        %         cWx_1(i) = normrnd(Ux(gyros_calibrating_angenls(1, 1), gyros_calibrating_angenls(1, 2), gyros_calibrating_angenls(1, 3)), wSigma) * Wz_true_scale_f + Wz_true_bias;
-        %         cWx_2(i) = normrnd(Ux(gyros_calibrating_angenls(2, 1), gyros_calibrating_angenls(2, 2), gyros_calibrating_angenls(2, 3)), wSigma) * Wz_true_scale_f + Wz_true_bias;
-        %         
-        %         cWy_1(i) = normrnd(Uy(gyros_calibrating_angenls(1, 1), gyros_calibrating_angenls(1, 2), gyros_calibrating_angenls(1, 3)), wSigma) * Wz_true_scale_f + Wz_true_bias;
-        %         cWy_2(i) = normrnd(Uy(gyros_calibrating_angenls(2, 1), gyros_calibrating_angenls(2, 2), gyros_calibrating_angenls(2, 3)), wSigma) * Wz_true_scale_f + Wz_true_bias;
-        %         
-        %         cWz_1(i) = normrnd(Uz(gyros_calibrating_angenls(3, 1), gyros_calibrating_angenls(3, 2), gyros_calibrating_angenls(3, 3)), wSigma) * Wz_true_scale_f + Wz_true_bias;
-        %         cWz_2(i) = normrnd(Uz(gyros_calibrating_angenls(4, 1), gyros_calibrating_angenls(4, 2), gyros_calibrating_angenls(4, 3)), wSigma) * Wz_true_scale_f + Wz_true_bias;
-            end
+           end
             
             % Calculate mean g for all axels
             meanAx1 = mean(cAx_1);
@@ -216,48 +207,6 @@ classdef Bins
                 fclose(obj.axels_calibration_results_file);
                 fclose(obj.gyros_calibration_results_file);
             end
-            
-        %     % Íàõîäèì ñðåäíåå çíà÷åíèå ñêîðîñòåé Çåìëè U
-        %     meanWx1 = mean(cWx_1);
-        %     meanWx2 = mean(cWx_2);
-        %     
-        %     meanWy1 = mean(cWy_1);
-        %     meanWy2 = mean(cWy_2);
-        %     
-        %     meanWz1 = mean(cWz_1);
-        %     meanWz2 = mean(cWz_2);
-        %     
-        %     % Íàõîäèì ñìåùåíèå íóëÿ èìàñøòàáíûé êîýôôèöèåíò ãèðîñêîïîâ
-        %       Wx_z_bias = (meanWx1 + meanWx2) / 2;
-        %     Wy_z_bias = (meanWy1 + meanWy2) / 2;
-        %     Wz_z_bias = (meanWz1 + meanWz2) / 2;
-        %     
-        %     Wx_scale_f = (meanWx2 - meanWx1) / 2 / Ux(0, 0, 0);
-        %     Wy_scale_f = (meanWy1 - meanWy2) / 2 / Uy(0, 0, 0);
-        %     Wz_scale_f = (meanWz1 - meanWz2) / 2 / Uz(0, 0, 0);
-        %     
-        %     fprintf(obj.gyros_calibration_results_file, "%s\n", "Âû÷èñëåííîå ñìåùåíèå íóëÿ ãèðîñêîïîâ:");
-        %     fprintf(obj.gyros_calibration_results_file, "Ax: %6f\n", Ax_z_bias);
-        %     fprintf(obj.gyros_calibration_results_file, "Ay: %6f\n", Ay_z_bias);
-        %     fprintf(obj.gyros_calibration_results_file, "Az: %6f\n\n", Az_z_bias);
-        % 
-        %     fprintf(obj.gyros_calibration_results_file, "%s\n", "Âû÷åñëåííûå ìàñøòàáíûå êîýôôèöèåíòû ãèðîñêîïîâ:");
-        %     fprintf(obj.gyros_calibration_results_file, "Ax: %6f\n", Ax_scale_f);
-        %     fprintf(obj.gyros_calibration_results_file, "Ay: %6f\n", Ay_scale_f);
-        %     fprintf(obj.gyros_calibration_results_file, "Az: %6f\n\n", Az_scale_f);
-        %     
-        %     fprintf(obj.gyros_calibration_results_file, "%s\n", "--------------------------------------------------");
-        %     
-        %     fprintf(obj.gyros_calibration_results_file, "%s\n", "Îøèáêà êàëèáðîâêè ñìåùåíèÿ íóëÿ ãèðîñêîïîâ:");
-        %     fprintf(obj.gyros_calibration_results_file, "Ax: |%6f - %6f| = %6f\n", Ax_true_bias, Ax_z_bias, abs(Ax_true_bias - Ax_z_bias));
-        %     fprintf(obj.gyros_calibration_results_file, "Ay: |%6f - %6f| = %6f\n", Ay_true_bias, Ay_z_bias, abs(Ax_true_bias - Ay_z_bias));
-        %     fprintf(obj.gyros_calibration_results_file, "Ay: |%6f - %6f| = %6f\n\n", Az_true_bias, Az_z_bias, abs(Ax_true_bias - Az_z_bias));
-        %     
-        %     fprintf(obj.gyros_calibration_results_file, "%s\n", "Îøèáêà êàëèáðîâêè ìàñøòàáíîãî êîýôôèöèåíòà àêñåëåðîìåòðîâ:");
-        %     fprintf(obj.gyros_calibration_results_file, "Ax: |%6f - %6f| = %6f\n", Ax_true_scale_f, Ax_scale_f, abs(Ax_true_scale_f - Ax_scale_f));
-        %     fprintf(obj.gyros_calibration_results_file, "Ay: |%6f - %6f| = %6f\n", Ay_true_scale_f, Ay_scale_f, abs(Ay_true_scale_f - Ay_scale_f));
-        %     fprintf(obj.gyros_calibration_results_file, "Ay: |%6f - %6f| = %6f\n\n", Az_true_scale_f, Az_scale_f, abs(Az_true_scale_f - Az_scale_f));
-    
         end
         
         function obj = run(obj)
@@ -312,7 +261,7 @@ classdef Bins
         % Solution (main) function
         function obj = calculate_ort_and_nav_params_(obj, i)
             % Get current g array in SSK and NSSK
-            gn = [0, obj.get_current_g_(obj.R_generated(i)), 0];
+            gn = [0, 0, obj.get_current_g_(obj.R_generated(i))];
 
             % Get accelerations in SSK frame
             obj.Ax_b(i) = obj.ax.measure(obj.Ax_generated(i));
@@ -322,8 +271,8 @@ classdef Bins
             Ab = [obj.Ax_b(i), obj.Ay_b(i), obj.Az_b(i)];
 
             obj.Fx_b(i) = obj.wx.measure(obj.Wx_generated(i));        
-            obj.Fy_b(i) = obj.wx.measure(obj.Wy_generated(i));
-            obj.Fz_b(i) = obj.wx.measure(obj.Wz_generated(i));
+            obj.Fy_b(i) = obj.wy.measure(obj.Wy_generated(i));
+            obj.Fz_b(i) = obj.wz.measure(obj.Wz_generated(i));
 
             Fb = [obj.Fx_b(i), obj.Fy_b(i), obj.Fz_b(i)];
 
@@ -340,13 +289,11 @@ classdef Bins
             % ----
 
             % Recalculate G quat
-%             A = obj.make_4x4_skew_matrinx_from_vector_([... 
-%                 obj.settings.U * cos(obj.settings.phi) * obj.settings.dt, ...
-%                 obj.settings.U * sin(obj.settings.phi) * obj.settings.dt, ...
-%                 0]);
-            A = obj.make_4x4_skew_matrinx_from_vector_(obj.Uv);
+%             A = obj.make_4x4_skew_matrinx_from_vector_(-obj.Uv);
+            A = obj.make_4x4_skew_matrinx_from_vector_( ...
+                [0, 0, obj.settings.U * obj.settings.dt]);
             dG = obj.settings.E + 0.5 * A + 0.25 * A^2;
-%             obj.G = (dG * obj.G')';
+            obj.G = (dG * obj.G')';
 
             % Recalculate main quat
             A = obj.make_4x4_skew_matrinx_from_vector_(Fb);
@@ -362,13 +309,19 @@ classdef Bins
 
             m0 = sqrt(M(3,1)^2 + M(3,3)^2);
 
-            obj.gamma(i)  = atan2(M(3,2), m0);
+            obj.gamma(i)  =  atan2(M(3,2), m0);
             obj.teta(i)   = atan2(M(1,2), M(2,2));
             obj.psi(i)    = atan2(M(3,1), M(3,3));
-% 
-            obj.Vx_n(i) = obj.Vx_n(i-1) + (An(1) - gn(1)) * obj.settings.dt;
-            obj.Vy_n(i) = obj.Vy_n(i-1) + (An(2) - gn(2)) * obj.settings.dt;
-            obj.Vz_n(i) = obj.Vz_n(i-1) + (An(3) - gn(3)) * obj.settings.dt;
+
+%             obj.Vx_n(i) = obj.Vx_n(i-1) + (An(1) - gn(1)) * obj.settings.dt;
+%             obj.Vy_n(i) = obj.Vy_n(i-1) + (An(2) - gn(2)) * obj.settings.dt;
+%             obj.Vz_n(i) = obj.Vz_n(i-1) + (An(3) - gn(3)) * obj.settings.dt;
+            
+%             obj.Vx_n(i) = obj.Vx_n(i-1) + (An(1)) * obj.settings.dt;
+%             obj.Vy_n(i) = obj.Vy_n(i-1) + (An(2)) * obj.settings.dt;
+%             obj.Vz_n(i) = obj.Vz_n(i-1) + (An(3)) * obj.settings.dt;
+            
+%             Vn = [obj.Vx_n(i), obj.Vy_n(i), obj.Vz_n(i)];
             
             obj.Sx_n(i) = obj.Sx_n(i - 1) + Vn(1) * obj.settings.dt;
             obj.Sy_n(i) = obj.Sy_n(i - 1) + Vn(2) * obj.settings.dt;
@@ -392,15 +345,16 @@ classdef Bins
                 obj.c = obj.c + 1;
             end
             
+%             disp(i)
             obj = obj.print_progress_bar_(i);
         end
         
         % Model functions
         function obj = initialize_model_arrays_(obj)
             % GSK solutions initialization
-            obj.phi = zeros(1, obj.settings.revolution_time / obj.settings.sample_rate / 60);
-            obj.la  = zeros(1, obj.settings.revolution_time / obj.settings.sample_rate / 60);
-            obj.h   = zeros(1, obj.settings.revolution_time / obj.settings.sample_rate / 60);
+            obj.phi = zeros(1, obj.settings.simulation_time / 60);
+            obj.la  = zeros(1, obj.settings.simulation_time / 60);
+            obj.h   = zeros(1, obj.settings.simulation_time / 60);
             
             % NSSK params initialization
             obj.Ax_n = zeros(1, obj.settings.simulation_iterations);
@@ -435,21 +389,21 @@ classdef Bins
             obj.Fy_n(1) = obj.settings.Fy_n_0;
             obj.Fz_n(1) = obj.settings.Fz_n_0;
 
-            obj.Sg = zeros(obj.settings.simulation_time / obj.settings.sample_rate / 60, 3);
-            obj.Sr = zeros(obj.settings.simulation_time / obj.settings.sample_rate / 60, 3);
+            obj.Sg = zeros(obj.settings.simulation_time / 60, 3);
+            obj.Sr = zeros(obj.settings.simulation_time / 60, 3);
             obj.Sn = zeros(obj.settings.simulation_iterations, 3);
             
             obj.Sx_n = zeros(1, obj.settings.simulation_iterations);
             obj.Sy_n = zeros(1, obj.settings.simulation_iterations);
             obj.Sz_n = zeros(1, obj.settings.simulation_iterations);
 
-            obj.Sx_r = zeros(1, obj.settings.simulation_time / obj.settings.sample_rate / 60);
-            obj.Sy_r = zeros(1, obj.settings.simulation_time / obj.settings.sample_rate / 60);
-            obj.Sz_r = zeros(1, obj.settings.simulation_time / obj.settings.sample_rate / 60);
+            obj.Sx_r = zeros(1, obj.settings.simulation_time / 60);
+            obj.Sy_r = zeros(1, obj.settings.simulation_time / 60);
+            obj.Sz_r = zeros(1, obj.settings.simulation_time / 60);
             
-            obj.Sx_g = zeros(1, obj.settings.simulation_time / obj.settings.sample_rate / 60);
-            obj.Sy_g = zeros(1, obj.settings.simulation_time / obj.settings.sample_rate / 60);
-            obj.Sz_g = zeros(1, obj.settings.simulation_time / obj.settings.sample_rate / 60);
+            obj.Sx_g = zeros(1, obj.settings.simulation_time / 60);
+            obj.Sy_g = zeros(1, obj.settings.simulation_time / 60);
+            obj.Sz_g = zeros(1, obj.settings.simulation_time / 60);
             
             % SSK dynamic params initialization
             obj.Ax_b = zeros(1, obj.settings.simulation_iterations);
@@ -502,10 +456,10 @@ classdef Bins
             obj.Wz_generated = zeros(1, obj.settings.simulation_iterations);
             
             % Fill real dynamic parameters arrays with zeros
-            obj.R_real  = zeros(1, obj.settings.simulation_time / obj.settings.sample_rate / 60);
-            obj.fi_real = zeros(1, obj.settings.simulation_time / obj.settings.sample_rate / 60);
-            obj.la_real = zeros(1, obj.settings.simulation_time / obj.settings.sample_rate / 60);
-            obj.t_real  = zeros(obj.settings.simulation_time / obj.settings.sample_rate / 60, 6);
+            obj.R_real  = zeros(1, obj.settings.simulation_time / 60);
+            obj.fi_real = zeros(1, obj.settings.simulation_time / 60);
+            obj.la_real = zeros(1, obj.settings.simulation_time / 60);
+            obj.t_real  = zeros(obj.settings.simulation_time / 60, 6);
             
             obj.Ax_real = zeros(1, obj.settings.simulation_iterations);
             obj.Ay_real = zeros(1, obj.settings.simulation_iterations);
@@ -644,6 +598,43 @@ classdef Bins
         end
         
         % Plot functions
+        function obj = plot(obj, data, title_, xlabel_, ylabel_, file_name_)
+            for i=1:lengtl(data)
+                figure()
+                plot(1:length(data{i}), data{i});
+                title(title_{i})
+                xlabel(xlabel_{i});
+                ylabel(ylabel_{i});
+                grid on;
+                saveas(gcf, join([obj.settings.solution_folder_name, '/', file_name_{i}]));
+            end
+        end
+        function obj = holdplot(obj, data, title_, xlabel_, ylabel_, file_name_)
+            figure()
+            hold on;
+            for i=1:length(data)
+                plot(1:length(data{i}), data{i});
+            end
+            hold off;
+            title(title_{i})
+            xlabel(xlabel_{i});
+            ylabel(ylabel_{i});
+            grid on;
+            saveas(gcf, join([obj.settings.solution_folder_name, '/', file_name_]));
+        end
+        function obj = subplot(obj, data, title_, xlabel_, ylabel_, rows, cols, file_name_)
+            figure()
+            for i=1:length(data)
+                subplot(rows, cols, i);
+                plot(1:length(data{i}), data{i});
+                title(title_{i})
+                xlabel(xlabel_{i});
+                ylabel(ylabel_{i});
+                grid on;
+            end
+            saveas(gcf, join([obj.settings.solution_folder_name, '/', file_name_]));
+        end
+        
         function obj = set_plot_parameters_(obj)
             obj.plot_parameter = {obj.Ax_b,       obj.Ay_b,       obj.Az_b,       };%obj.psi,      obj.teta,      obj.gamma,      obj.h};
             obj.plot_tile      = {'Vx_n',         'Vy_n',         'Vz_n',         'Psi',        'Teta',        'Gamma',        'H'};
@@ -724,51 +715,18 @@ classdef Bins
             saveas(gcf, join([obj.settings.solution_folder_name, '/trajectory.jpg']));                
         end
         function obj = print_generated_trajectory_(obj)
-            figure();
-            subplot(1, 2, 1);
-            plot(1:obj.settings.simulation_iterations, obj.R_generated);
-            title('Distance from the center of the Earth to the spacecraft')
-            xlabel('time, [sec]');
-            ylabel('R, [m]');
-            grid on;
-
-            subplot(1, 2, 2);
-            plot(1:obj.settings.simulation_iterations, obj.Vz_generated);
-            title('Linear speed of the spacecraft')
-            xlabel('time, [sec]');
-            ylabel('Linear vel (X axis), [m/sec]');
-            grid on;
+            obj.subplot({obj.R_generated, obj.Vz_generated}, ...
+                {'Distance from the center of the Earth to the spacecraft'}, ...
+                {'time, [sec]', 'time, [sec]'}, ...
+                {'R, [m]', 'Linear vel (X axis), [m/sec]'}, ...
+                1,2, ...
+                {'generated_trajectory.png'});
         end
         function obj = print_solutions_error_(obj)
             % LLA errors
-            t = 98;
             la_diff  = obj.la_real - obj.la;
             phi_diff = obj.fi_real - obj.phi;
-            R_diff   = obj.R_real  - obj.h;      
-            
-            
-            figure();
-            subplot(3, 1, 1);            
-            plot(1:t, la_diff);
-            title('Longtitude calculaion error')
-            xlabel('time, [min]');
-            ylabel('La, [grad]');
-            grid on;
-
-            subplot(3, 1, 2);
-            plot(1:t, phi_diff);
-            title('Latitude calculaion error')
-            xlabel('time, [min]');
-            ylabel('Phi [grad]');
-            grid on;
-            
-            subplot(3, 1, 3);
-            plot(1:t, R_diff);
-            title('Radius calculaion error')
-            xlabel('time, [min]');
-            ylabel('R [m]');
-            grid on;
-            saveas(gcf, join([obj.settings.solution_folder_name, '/lla_error.jpg']));     
+            R_diff   = obj.R_real  - obj.h;
             
             % Ecef errors
             Sx_diff = zeros(1, obj.settings.simulation_time / 60);
@@ -781,51 +739,31 @@ classdef Bins
                 Sz_diff(i) = obj.Sr(i, 3) - obj.Sg(i, 3);
             end
             
-            figure()
-            subplot(3,1,1);
-            plot(1:obj.settings.simulation_time / 60, Sx_diff);
-            title('Sx calculaion error')
-            xlabel('iterrations, [n]');
-            ylabel('Sx [m]');
-            grid on;
+            % Angles error
+            psi_diff   = obj.psi;
+            teta_diff  = obj.teta;
+            gamma_diff = obj.gamma;
             
-            subplot(3,1,2);
-            plot(1:obj.settings.simulation_time / 60, Sy_diff);
-            title('Sy calculaion error')
-            xlabel('iterrations, [n]');
-            ylabel('Sy [m]');
-            grid on;
+            obj.subplot({la_diff, phi_diff, R_diff}, ...
+                {'Longtitude calculaion error', 'Latitude calculaion error', 'Radius calculaion error'}, ...
+                {'time, [min]', 'time, [min]', 'time, [min]'}, ...
+                {'La, [grad]', 'Phi [grad]', 'R [m]'}, ...
+                3,1, ...
+                'lla_error.png'); 
             
-            subplot(3,1,3);
-            plot(1:obj.settings.simulation_time / 60, Sz_diff);
-            title('Sz calculaion error')
-            xlabel('iterrations, [n]');
-            ylabel('Sz [m]');
-            grid on;
-            saveas(gcf, join([obj.settings.solution_folder_name, '/coordinates_error.jpg']));
-            
-            figure()
-            subplot(3,1,1);
-            plot(1:obj.settings.simulation_iterations, obj.gamma);
-            title('Gamma calculaion error')
-            xlabel('iterrations, [n]');
-            ylabel('Gamma, [rad]');
-            grid on;
-            
-            subplot(3,1,2);
-            plot(1:obj.settings.simulation_iterations, obj.psi);
-            title('Psi calculaion error')
-            xlabel('iterrations, [n]');
-            ylabel('Psi, [rad]');
-            grid on;
-            
-            subplot(3,1,3);
-            plot(1:obj.settings.simulation_iterations, obj.teta);
-            title('Teta calculaion error')
-            xlabel('iterrations, [n]');
-            ylabel('Teta, [rad]');
-            grid on;
-            saveas(gcf, join([obj.settings.solution_folder_name, '/angles_error.jpg']));  
+            obj.subplot({Sx_diff, Sy_diff, Sz_diff}, ...
+                {'Sx calculaion error', 'Sy calculaion error', 'Sz calculaion error'}, ...
+                {'iterrations, [n]', 'iterrations, [n]', 'iterrations, [n]'}, ...
+                {'Sx [m]', 'Sy [m]', 'Sz [m]'}, ...
+                3,1, ...
+                'coordinates_error.png'); 
+
+            obj.subplot({psi_diff, teta_diff, gamma_diff}, ...
+                {'Psi calculaion error', 'Teta calculaion error', 'Gamma calculaion error'}, ...
+                {'iterrations, [n]', 'iterrations, [n]', 'iterrations, [n]'}, ...
+                {'Psi [rad]', 'Teta [rad]', 'Gamma [rad]'}, ...
+                3,1, ...
+                'angles_error.png'); 
         end
         
         % Telemetry funtions
@@ -838,7 +776,7 @@ classdef Bins
             line = split(string);
             
             % Spacecraft angular velocity of rotation around his 'X' axis [rad/n]
-            obj.Wx_generated(1) = 2 * pi / obj.settings.revolution_time * obj.settings.sample_rate;
+            obj.Wx_generated(1) = 2 * pi / obj.settings.revolution_time / obj.settings.sample_rate;
             obj.Vy_generated(1) = str2double(line{1});
             obj.Az_generated(1) = obj.get_current_g_(obj.R_real(1));
             obj.R_generated(1) = obj.R_real(1);
@@ -846,12 +784,13 @@ classdef Bins
             string = fgetl(linear_vel);
             line = split(string);
             
-            dV = (str2double(line{1}) - obj.Vy_generated(1)) / 60;
-            dR = (obj.R_real(2) - obj.R_real(1)) /60;
+            dV = (str2double(line{1}) - obj.Vy_generated(1)) / 60 / obj.settings.sample_rate;
+            dR = (obj.R_real(2) - obj.R_real(1)) / 60 / obj.settings.sample_rate;
+            obj.Ay_generated(1) = dV;
             counter = 2;
             
             for i = 2:obj.settings.simulation_iterations
-                if (mod(i, 60) == 0) && (i ~= obj.settings.simulation_iterations)
+                if (mod(i, 60 * obj.settings.sample_rate) == 0) && (i ~= obj.settings.simulation_iterations)
                     string = fgetl(linear_vel);
                     line = split(string);
                     
