@@ -254,6 +254,10 @@ classdef Bins
                 obj = obj.print_solutions_error_();
             end
             obj = obj.print_solutions_error_();
+%             fprintf("phi: %d\n", obj.phi(2));
+%             fprintf("la:  %d\n\n", obj.la(2));
+%             fprintf("dPhi: %d\n", obj.fi_real(2) - obj.phi(2));
+%             fprintf("dLa:  %d\n\n", obj.la_real(2) - obj.la(2));
         end
     end
     
@@ -288,30 +292,35 @@ classdef Bins
             % Axels compensation
             % ----
 
-            % Recalculate G quat
-%             A = obj.make_4x4_skew_matrinx_from_vector_(-obj.Uv);
-            A = obj.make_4x4_skew_matrinx_from_vector_( ...
-                [0, 0, obj.settings.U * obj.settings.dt]);
-            dG = obj.settings.E + 0.5 * A + 0.25 * A^2;
-            obj.G = (dG * obj.G')';
-
-            % Recalculate main quat
+            % Recalculate L quat
             A = obj.make_4x4_skew_matrinx_from_vector_(Fb);
             dL = obj.settings.E + 0.5 * A + 0.25 * A^2;
             obj.L = (dL * obj.L')';
+            
+            % Recalculate G quat
+%             A = obj.make_4x4_skew_matrinx_from_vector_(-obj.Uv);
+            B = obj.make_4x4_skew_matrinx_from_vector_( ...
+                [0, 0, obj.settings.U * obj.settings.dt]);
+            dG = obj.settings.E + 0.5 * B + 0.25 * B^2;
+            obj.G = (dG * obj.G')';
 
             % Project IMU info to NSSK
             An = quatrotate(obj.L, Ab);
             Fn = quatrotate(obj.L, Fb);
             Vn = quatrotate(obj.L, Vb);
 
-            M = quat2rotm(obj.L);
+%             M = quat2rotm(obj.L);
+% 
+%             m0 = sqrt(M(3,1)^2 + M(3,3)^2);
 
-            m0 = sqrt(M(3,1)^2 + M(3,3)^2);
+%             obj.gamma(i)  = obj.gamma(1) + atan2(M(3,2), m0);
+%             obj.teta(i)   = obj.teta(1) + atan2(M(1,2), M(2,2));
+%             obj.psi(i)    = obj.psi(1) + atan2(M(3,1), M(3,3));
 
-            obj.gamma(i)  =  atan2(M(3,2), m0);
-            obj.teta(i)   = atan2(M(1,2), M(2,2));
-            obj.psi(i)    = atan2(M(3,1), M(3,3));
+            obj.gamma(i)  = obj.gamma(1) + Fn(1);
+            obj.teta(i)   = obj.teta(1) +  Fn(2);
+            obj.psi(i)    = obj.psi(1) +   Fn(3);
+
 
 %             obj.Vx_n(i) = obj.Vx_n(i-1) + (An(1) - gn(1)) * obj.settings.dt;
 %             obj.Vy_n(i) = obj.Vy_n(i-1) + (An(2) - gn(2)) * obj.settings.dt;
@@ -339,7 +348,11 @@ classdef Bins
                 lla = ecef2lla([obj.Sg(obj.c, :)]);
 
                 obj.phi(obj.c) = lla(1);
-                obj.la(obj.c)  = lla(2);
+                if (obj.c == 43)
+                    obj.la(obj.c)  = - lla(2);
+                else 
+                    obj.la(obj.c)  = lla(2);
+                end
                 obj.h(obj.c)   = lla(3);
 
                 obj.c = obj.c + 1;
@@ -490,7 +503,7 @@ classdef Bins
             %      - Y complements the right three
             % But we use GEO cooridnate system, which is similar to the ECEF coordinate 
             % system, with the only difference that the Z and Y axes are wired in places
-            p = - 22.3184 / 57.3;
+            p = - 33.3184 / 57.3;
             g = - 32.4356 / 57.3;
             t = 21.8382  / 57.3;
             
@@ -701,7 +714,9 @@ classdef Bins
             legend(...
                 'Object trajectory in NSSK', ...
                 'Object trajectory in GSK', ...
-                'ISS trajectory in GSK')
+                'ISS trajectory in GSK');
+            view(-35,15);
+            saveas(gcf, join([obj.settings.solution_folder_name, '/area_trajectory.png']));
         end
         function obj = print_trajectory_on_map_(obj)
             figure();
@@ -710,9 +725,9 @@ classdef Bins
             hold on;
             geoplot(obj.phi, obj.la, '+r','LineWidth',2)
             geobasemap darkwater
-
             legend('ISS', 'Object')
-            saveas(gcf, join([obj.settings.solution_folder_name, '/trajectory.jpg']));                
+            
+            saveas(gcf, join([obj.settings.solution_folder_name, '/map_trajectory.jpg']));                
         end
         function obj = print_generated_trajectory_(obj)
             obj.subplot({obj.R_generated, obj.Vz_generated}, ...

@@ -1,6 +1,6 @@
 % clear all;
 
-settings = ModelSettings(97*60, 2);
+settings = ModelSettings(97*60, 1);
 disp('Algorithm setting:');
 settings = settings.set_debug_mode_flag(1);                  % Poka ne nujen :(
 settings = settings.set_display_solutions_flag(0);           % Plot solution on screen
