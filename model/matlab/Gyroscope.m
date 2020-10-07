@@ -1,7 +1,7 @@
 classdef Gyroscope
     properties
-        bias         = 0.03924; % [g]
-        scale_factor = 1.3;
+        bias         = 1e-4; % [g]
+        scale_factor = 1.000012;
         
         % 'true_' values - values, obtained after the calibration procedure.
         % By default, this values are:
@@ -18,7 +18,6 @@ classdef Gyroscope
             obj.bias = (2 * randi([0 1]) - 31) * (-bias + rand * 2 * bias);
             
             obj.sko = sko;
-%             obj.error_function = axel_error_function;
             disp('Gyroscope created successfully.')
         end
         
@@ -34,8 +33,8 @@ classdef Gyroscope
         end
         
         function measured_value = measure(obj, value)
-%             measured_value = obj.make_noise(value);
-            measured_value = value;
+            measured_value = obj.make_noise(value);
+%             measured_value = value;
         end
     end
 end

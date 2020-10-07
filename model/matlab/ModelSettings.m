@@ -53,9 +53,9 @@ classdef ModelSettings
         axel_bias             = 0.03924;      % Accelerometer bias [g]
         axel_sko              = 3.3e-4 * 9.8; % Accelerometer sko  [g]
         
-        gyro_min_scale_factor = 1.2; 
-        gyro_max_scale_factor = 1.4;
-        gyro_bias             = 0.03924;            % Gyro bias [rad/sec]
+        gyro_min_scale_factor = 1; 
+        gyro_max_scale_factor = 1.1;
+        gyro_bias             = 1e-4;            % Gyro bias [rad/sec]
         gyro_sko              = 0.03 / 57.3 / 3600; % Gyro sko  [rad/sec]
 
         % Programm settings
@@ -86,6 +86,7 @@ classdef ModelSettings
         algorithm_results_errors_file_path;  % Path to file which will be stored algorithm results errors
         path_to_telemetry_file;              % Path to file which contain real ISS teelemetry
         path_to_linear_vel_file;             % Path to file which contain real ISS linear velocity
+        path_to_linear_accelerations_file;   % Path to file which contain real ISS linear accelerations
         
         % Progress bar parameters
         % ----------------------------------------------------------------------------------------         
@@ -118,7 +119,8 @@ classdef ModelSettings
             obj.algorithm_results_errors_file_path = join([obj.solution_folder_name, '/', obj.algorithm_results_errors_file_name]);
 
             obj.path_to_telemetry_file = './telemetry/russia_one_rev_km.txt';
-            obj.path_to_linear_vel_file = './telemetry/V.txt';
+            obj.path_to_linear_vel_file = './telemetry/linear_vels.txt';
+            obj.path_to_linear_accelerations_file = './telemetry/linear_accelerations.txt';
             
             mkdir(obj.solution_folder_name);
             
@@ -128,7 +130,7 @@ classdef ModelSettings
             obj.Az_n_0 = 0;
 
             obj.Vx_n_0 = 0;
-            obj.Vy_n_0 = obj.v_min;
+            obj.Vy_n_0 = 7661.8;
             obj.Vz_n_0 = 0;
 
             obj.Wx_n_0 = 0;
@@ -145,7 +147,7 @@ classdef ModelSettings
             obj.Az_b_0 = obj.M * obj.G / ((obj.Rad + obj.h_min) ^ 2);
 
             obj.Vx_b_0 = 0;
-            obj.Vy_b_0 = obj.v_min;
+            obj.Vy_b_0 = 7661.8;
             obj.Vz_b_0 = 0;
 
             obj.Wx_b_0 = 2 * pi / obj.revolution_time;
@@ -193,6 +195,11 @@ classdef ModelSettings
         function obj = set_plot_trajectoey_simulation_flag(obj, plot_trajectory)
             obj.plot_trajectory_simulation_flag = plot_trajectory;
             fprintf('Plot trajectory mode:  %d.\n', obj.plot_trajectory_simulation_flag);
+        end
+        
+        function obj = set_calibration_mode_flag(obj, calibration_mode)
+            obj.calibration_mode_flag = calibration_mode;
+            fprintf('Calibration mode:  %d.\n', obj.plot_trajectory_simulation_flag);
         end
     end
 end
