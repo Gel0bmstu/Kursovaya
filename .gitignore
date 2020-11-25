@@ -1,8 +1,9 @@
 docs/muravev/
+plots/
+model/matlab/solutions/
 
 *.m~
 *.asv
 *.slx
 *.slxc
 *test*
-model/matlab/solutions/
