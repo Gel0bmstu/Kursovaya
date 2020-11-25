@@ -37,9 +37,13 @@ classdef Bins
         Vb; Vx_b; Vy_b; Vz_b; % Object linear velocity in SSK
         Fb; Fx_b; Fy_b; Fz_b; % Object angular vels incriments in SSK
         
+        Vg; Vx_g; Vy_g; Vz_g; % Object linear velocity in GSK
         Sg; Sx_g; Sy_g; Sz_g; % Object coordinates in GSK
+        Vr; Vx_r; Vy_r; Vz_r; % ISS real linear velocity in GSK
+        
         Sr; Sx_r; Sy_r; Sz_r; % Real ISS coordinates in GSK
         
+        psi_real; teta_real; gamma_real;
         psi; teta; gamma; h; % Object angles in NSSK
         phi; la;             % Object trajectory in GSK
 
@@ -106,9 +110,6 @@ classdef Bins
             % Apply BINS settings
             obj.settings = settings;
             
-            obj = obj.initialize_model_arrays_();
-            obj = obj.set_zero_conditions_();
-            
             % Sensors initialization
             obj.ax = Accelerometer(settings.axel_min_scale_factor, settings.axel_max_scale_factor, settings.axel_bias, settings.axel_sko);
             obj.ay = Accelerometer(settings.axel_min_scale_factor, settings.axel_max_scale_factor, settings.axel_bias, settings.axel_sko);
@@ -117,6 +118,9 @@ classdef Bins
             obj.wx = Gyroscope(settings.gyro_min_scale_factor, settings.gyro_max_scale_factor, settings.gyro_bias, settings.gyro_sko);
             obj.wy = Gyroscope(settings.gyro_min_scale_factor, settings.gyro_max_scale_factor, settings.gyro_bias, settings.gyro_sko);
             obj.wz = Gyroscope(settings.gyro_min_scale_factor, settings.gyro_max_scale_factor, settings.gyro_bias, settings.gyro_sko);
+            
+            obj = obj.initialize_model_arrays_();
+            obj = obj.set_zero_conditions_();
             
             % Set real trajectory params
             obj.k = 2 * pi / settings.revolution_time;
@@ -226,9 +230,6 @@ classdef Bins
             end
             disp('Calculations is over successfully.')
             
-            obj = obj.print_calculated_trajectory_();
-            obj = obj.print_trajectory_on_map_();
-            
             % Log solution results & errors in file
             if (obj.settings.log_algorithm_solutions_flag)
                 obj = obj.log_solution_to_file_();
@@ -237,6 +238,9 @@ classdef Bins
             % Print graphs
             if (obj.settings.display_solutions_flag)
                 obj = obj.set_plot_parameters_();
+                
+                obj = obj.print_calculated_trajectory_();
+                obj = obj.print_trajectory_on_map_();
                 
                 if (obj.settings.plot_trajectory_simulation_flag)
                     % Print trajectory simulation prams (Vx, Ay, Wz) on screen
@@ -252,6 +256,46 @@ classdef Bins
                 end
             end
             obj = obj.print_solutions_error_();
+        end
+        
+        % Plot functions
+        function obj = plot(obj, data, title_, xlabel_, ylabel_, file_name_)
+            for i=1:length(data)
+                figure()
+                plot(1:length(data{i}), data{i});
+                set(gca, 'fontsize', obj.settings.font_size);
+%                 set(gcf, 'Position', get(0, 'Screensize'));
+                title(title_{i})
+                xlabel(xlabel_{i});
+                ylabel(ylabel_{i});
+                grid on;
+                saveas(gcf, join([obj.settings.solution_folder_name, '/', file_name_{i}]));
+            end
+        end
+        function obj = holdplot(obj, data, title_, xlabel_, ylabel_, file_name_)
+            figure()
+            hold on;
+            for i=1:length(data)
+                plot(1:length(data{i}), data{i});
+            end
+            hold off;
+            title(title_{i})
+            xlabel(xlabel_{i});
+            ylabel(ylabel_{i});
+            grid on;
+            saveas(gcf, join([obj.settings.solution_folder_name, '/', file_name_]));
+        end
+        function obj = subplot(obj, data, title_, xlabel_, ylabel_, rows, cols, file_name_)
+            figure()
+            for i=1:length(data)
+                subplot(rows, cols, i);
+                plot(1:length(data{i}), data{i});
+                title(title_{i})
+                xlabel(xlabel_{i});
+                ylabel(ylabel_{i});
+                grid on;
+            end
+            saveas(gcf, join([obj.settings.solution_folder_name, '/', file_name_]));
         end
     end
     
@@ -297,18 +341,24 @@ classdef Bins
             An = Ab;
             Fn = quatrotate(obj.L, Fb);
             obj.Vn(i, :) = quatrotate(obj.L, Vb);
+            
+            M = quat2rotm(obj.L);
 
-%             M = quat2rotm(obj.L);
+            m0 = sqrt(M(3,1)^2 + M(3,3)^2);
 % 
-%             m0 = sqrt(M(3,1)^2 + M(3,3)^2);
+%             obj.gamma(i)  = atan2(M(3,2), m0);
+%             obj.teta(i)   = atan2(M(1,2), M(2,2));
+%             obj.psi(i)    = atan2(M(3,1), M(3,3));
 
-%             obj.gamma(i)  = obj.gamma(1) + atan2(M(3,2), m0);
-%             obj.teta(i)   = obj.teta(1) + atan2(M(1,2), M(2,2));
-%             obj.psi(i)    = obj.psi(1) + atan2(M(3,1), M(3,3));
-
-            obj.gamma(i)  = obj.gamma(1) + Fn(1);
-            obj.teta(i)   = obj.teta(1) +  Fn(2);
-            obj.psi(i)    = obj.psi(1) +   Fn(3);
+            obj.gamma(i)  = obj.gamma(i-1) + Fn(1);
+            obj.teta(i)   = obj.teta(i-1)  + Fn(2);
+            obj.psi(i)    = obj.psi(i-1)   + Fn(3);
+            
+            r_angles = quatrotate(obj.L, [obj.Wx_generated(i), obj.Wy_generated(i), obj.Wz_generated(i)]);
+            
+            obj.psi_real(i) = obj.psi_real(i-1) + r_angles(3);
+            obj.teta_real(i) = obj.teta_real(i-1) + r_angles(2);
+            obj.gamma_real(i) = obj.gamma_real(i-1) + r_angles(1);
             
             obj.Vx_n(i) = obj.Vx_n(i-1) + (An(1))*obj.settings.dt;
             obj.Vy_n(i) = obj.Vy_n(i-1) + (An(2))*obj.settings.dt;
@@ -321,6 +371,11 @@ classdef Bins
 %             obj.Vz_n(i) = obj.Vz_n(i-1) + (An(3) - gn_r(3))*obj.settings.dt;
 %             
             obj.Vn(i, :) = [obj.Vx_n(i), obj.Vy_n(i), obj.Vz_n(i)];
+            
+            obj.Vg(i, :) = quatrotate(obj.G, obj.Vn(i, :));
+            obj.Vx_g(i) = obj.Vg(i, 1);
+            obj.Vy_g(i) = obj.Vg(i, 2);
+            obj.Vz_g(i) = obj.Vg(i, 3);
             
             obj.Sx_n(i) = obj.Sx_n(i - 1) + obj.Vn(i, 1) * obj.settings.dt;
             obj.Sy_n(i) = obj.Sy_n(i - 1) + obj.Vn(i, 2) * obj.settings.dt;
@@ -368,6 +423,8 @@ classdef Bins
             obj.Ay_n(1) = obj.settings.Ay_n_0;
             obj.Az_n(1) = obj.settings.Az_n_0;
 
+            obj.Vn = zeros(obj.settings.simulation_iterations, 3);
+            
             obj.Vx_n = zeros(1, obj.settings.simulation_iterations);
             obj.Vy_n = zeros(1, obj.settings.simulation_iterations);
             obj.Vz_n = zeros(1, obj.settings.simulation_iterations);
@@ -375,6 +432,26 @@ classdef Bins
             obj.Vx_n(1) = obj.settings.Vx_n_0;
             obj.Vy_n(1) = obj.settings.Vy_n_0;
             obj.Vz_n(1) = obj.settings.Vz_n_0;
+
+            obj.Vg = zeros(obj.settings.simulation_iterations, 3);
+            
+            obj.Vx_g = zeros(1, obj.settings.simulation_iterations);
+            obj.Vy_g = zeros(1, obj.settings.simulation_iterations);
+            obj.Vz_g = zeros(1, obj.settings.simulation_iterations);
+            
+            obj.Vx_g(1) = 0;
+            obj.Vy_g(1) = 0;
+            obj.Vz_g(1) = 0;
+
+            obj.Vr = zeros(obj.settings.simulation_iterations, 3);
+            
+            obj.Vx_r = zeros(1, obj.settings.simulation_iterations);
+            obj.Vy_r = zeros(1, obj.settings.simulation_iterations);
+            obj.Vz_r = zeros(1, obj.settings.simulation_iterations);
+            
+            obj.Vx_r(1) = 0;
+            obj.Vy_r(1) = 0;
+            obj.Vz_r(1) = 0;
             
             obj.Wx_n = zeros(1, obj.settings.simulation_iterations);
             obj.Wy_n = zeros(1, obj.settings.simulation_iterations);
@@ -479,14 +556,18 @@ classdef Bins
             obj.psi   = zeros(1, obj.settings.simulation_iterations);
             obj.teta  = zeros(1, obj.settings.simulation_iterations);
             obj.gamma = zeros(1, obj.settings.simulation_iterations);
+            
+            obj.psi_real   = zeros(1, obj.settings.simulation_iterations);
+            obj.teta_real  = zeros(1, obj.settings.simulation_iterations);
+            obj.gamma_real = zeros(1, obj.settings.simulation_iterations);
         end
         function obj = set_zero_conditions_(obj)
             obj.phi(1) = obj.settings.phi * 57.3;
             obj.la(1)  = obj.settings.la  * 57.3;
             
-            obj.psi(1)   = 0; 
-            obj.teta(1)  = 0;
-            obj.gamma(1) = 0;
+            obj.psi(1)   = obj.wy.measure(0); 
+            obj.teta(1)  = obj.wz.measure(0);
+            obj.gamma(1) = obj.wx.measure(0.0011);
             
             % ECEF - Z towards North Pole
             %      - X pierce (0,0) coordinate point (cross Greenwich med and equator)
@@ -506,22 +587,16 @@ classdef Bins
             obj.G = quatmultiply(quatmultiply(P, Q), R);
             
             obj.Uv = quatrotate(quatconj(obj.G), [0, 0, obj.settings.U]);
-            % Real 
-            obj.Sx_g(1) = obj.settings.Rad * 0.530;
-            obj.Sy_g(1) = obj.settings.Rad * 0.396;
-            obj.Sz_g(1) = obj.settings.Rad * 0.834;
-            
-            obj.Sg(1, :) = [obj.Sx_g(1), obj.Sy_g(1), obj.Sz_g(1)];
 
             obj.Sx_n(1) = 0;
             obj.Sy_n(1) = 0;
             obj.Sz_n(1) = 6789744; 
             
+            obj.Sn(1, :) = [obj.Sx_n(1), obj.Sy_n(1), obj.Sz_n(1)];
+            
             obj.Vn(1, 1) = obj.settings.Vx_n_0;
             obj.Vn(1, 2) = obj.settings.Vy_n_0;
             obj.Vn(1, 3) = obj.settings.Vz_n_0;
-            
-            obj.Sn(1, :) = [obj.Sx_n(1), obj.Sy_n(1), obj.Sz_n(1)];
         end
         function mtr = make_4x4_skew_matrinx_from_vector_(obj, v)
             mtr = [ 0, -v(1), -v(2),  -v(3);
@@ -604,66 +679,26 @@ classdef Bins
             obj.gyros_calibration_results_file = fopen(obj.settings.gyros_calibration_results_file_path, 'w+');
         end
         
-        % Plot functions
-        function obj = plot(obj, data, title_, xlabel_, ylabel_, file_name_)
-            for i=1:lengtl(data)
-                figure()
-                plot(1:length(data{i}), data{i});
-                title(title_{i})
-                xlabel(xlabel_{i});
-                ylabel(ylabel_{i});
-                grid on;
-                saveas(gcf, join([obj.settings.solution_folder_name, '/', file_name_{i}]));
-            end
-        end
-        function obj = holdplot(obj, data, title_, xlabel_, ylabel_, file_name_)
-            figure()
-            hold on;
-            for i=1:length(data)
-                plot(1:length(data{i}), data{i});
-            end
-            hold off;
-            title(title_{i})
-            xlabel(xlabel_{i});
-            ylabel(ylabel_{i});
-            grid on;
-            saveas(gcf, join([obj.settings.solution_folder_name, '/', file_name_]));
-        end
-        function obj = subplot(obj, data, title_, xlabel_, ylabel_, rows, cols, file_name_)
-            figure()
-            for i=1:length(data)
-                subplot(rows, cols, i);
-                plot(1:length(data{i}), data{i});
-                title(title_{i})
-                xlabel(xlabel_{i});
-                ylabel(ylabel_{i});
-                grid on;
-            end
-            saveas(gcf, join([obj.settings.solution_folder_name, '/', file_name_]));
-        end
-        
         function obj = set_plot_parameters_(obj)
-            obj.plot_parameter = {obj.Ax_b,       obj.Ay_b,       obj.Az_b,       };%obj.psi,      obj.teta,      obj.gamma,      obj.h};
-            obj.plot_tile      = {'Vx_n',         'Vy_n',         'Vz_n',         'Psi',        'Teta',        'Gamma',        'H'};
-            obj.plot_x_label   = {'t, [s]',       't, [s]',       't, [s]',       't, [s]',     't, [s]',      't, [s]',       't, [s]'};
-            obj.plot_y_label   = {'Vx_n, [ms/s]', 'Vy_n, [ms/s]', 'Vz_n, [ms/s]', 'Psi, [rad]', 'Teta, [rad]', 'Gamma, [rad]', 'H, [m]'};
+            obj.plot_parameter = {obj.Vx_n,       obj.Vy_n,       obj.Vz_n,       obj.Vx_g,       obj.Vy_g,       obj.Vz_g, ...
+                obj.psi,      obj.teta,      obj.gamma,      obj.h};
+            obj.plot_tile      = {'Vx_n',         'Vy_n',         'Vz_n',         'Vx_g',         'Vy_g',         'Vz_g', ...
+                'Psi',        'Teta',        'Gamma',        'H'};
+            obj.plot_x_label   = {'iter, [n]',  'iter, [n]',       'iter, [n]',   'iter, [n]',     'iter, [n]',    'iter, [n]', ...
+                'iter, [n]',  'iter, [n]',   'iter, [n]',    't, [s]'};
+            obj.plot_y_label   = {'Vx_n, [ms/s]', 'Vy_n, [ms/s]', 'Vz_n, [ms/s]', 'Vx_g, [ms/s]',  'Vy_g, [ms/s]', 'Vz_g, [ms/s]', ...
+                'Psi, [rad]', 'Teta, [rad]', 'Gamma, [rad]', 'H, [m]'};
             obj.plot_solution_path = {};
             for i = 1:length(obj.plot_parameter)
-                obj.plot_solution_path{i} = join(['/', obj.plot_tile{i}, '.jpg']);
+                obj.plot_solution_path{i} = join(['/', obj.plot_tile{i}, '.png']);
             end
         end
         function obj = print_solution_single_plot_(obj)
-            for i = 1:length(obj.plot_parameter)
-                figure();
-                plot(1:obj.settings.simulation_time, obj.plot_parameter{i}(obj.settings.sample_rate:obj.settings.sample_rate:end));
-                set(gca, 'fontsize', obj.settings.font_size);
-                set(gcf, 'Position', get(0, 'Screensize'));
-                title(obj.plot_tile{i});
-                xlabel(obj.plot_x_label{i});
-                ylabel(obj.plot_y_label{i});
-                grid on;
-                saveas(gcf, join([obj.settings.solution_folder_name, obj.plot_solution_path{i}]));                
-            end
+            obj.plot(obj.plot_parameter, ...
+                obj.plot_tile, ...
+                obj.plot_x_label, ...
+                obj.plot_y_label, ...
+                obj.plot_solution_path);
         end
         function obj = print_solutions_sub_plot_(obj)
             disp('Plotting solution in single plot ...');
@@ -737,21 +772,25 @@ classdef Bins
             phi_diff = obj.fi_real - obj.phi;
             R_diff   = obj.R_real  - obj.h;
             
+            la_diff(43) = la_diff(42) + (la_diff(44) - la_diff(42)) / 2;
+            
             % Ecef errors
             Sx_diff = zeros(1, obj.settings.simulation_time / 60);
             Sy_diff = zeros(1, obj.settings.simulation_time / 60);
             Sz_diff = zeros(1, obj.settings.simulation_time / 60);
             
-            for i = 1:obj.settings.simulation_time / 60
-                Sx_diff(i) = obj.Sr(i, 1) - obj.Sg(i, 1);
-                Sy_diff(i) = obj.Sr(i, 2) - obj.Sg(i, 2);
-                Sz_diff(i) = obj.Sr(i, 3) - obj.Sg(i, 3);
-            end
+            Sx_diff = obj.Sr(:, 1) - obj.Sg(:, 1);
+            Sy_diff = obj.Sr(:, 2) - obj.Sg(:, 2);
+            Sz_diff = obj.Sr(:, 3) - obj.Sg(:, 3);
             
             % Angles error
-            psi_diff   = 0 - obj.psi;
-            teta_diff  = 0 - obj.teta;
-            gamma_diff = obj.Wx_generated - obj.gamma;
+            psi_diff   = (obj.psi_real - obj.psi) * 57.3;
+            teta_diff  = (obj.teta_real - obj.teta) * 57.3;
+            gamma_diff = (obj.gamma_real - obj.gamma) * 57.3;
+            
+            vg_x_diff = obj.Vg(:, 1)  - obj.Vr(:, 1);
+            vg_y_diff = obj.Vg(:, 2)  - obj.Vr(:, 2);
+            vg_z_diff = obj.Vg(:, 3)  - obj.Vr(:, 3);
             
             obj.subplot({la_diff, phi_diff, R_diff}, ...
                 {'Longtitude calculaion error', 'Latitude calculaion error', 'Radius calculaion error'}, ...
@@ -770,17 +809,34 @@ classdef Bins
             obj.subplot({psi_diff, teta_diff, gamma_diff}, ...
                 {'Psi calculaion error', 'Teta calculaion error', 'Gamma calculaion error'}, ...
                 {'iterrations, [n]', 'iterrations, [n]', 'iterrations, [n]'}, ...
-                {'Psi [rad]', 'Theta [rad]', 'Gamma [rad]'}, ...
+                {'Psi [grad]', 'Theta [grad]', 'Gamma [grad]'}, ...
                 3,1, ...
                 'angles_error.png'); 
+            
+            obj.subplot({vg_x_diff, vg_y_diff, vg_z_diff}, ...
+                {'Vg_x calculaion error', 'Vg_y calculaion error', 'Vg_z calculaion error'}, ...
+                {'iter, [n]', 'iter, [n]', 'iter, [n]'}, ...
+                {'Vg_x, [ms/s]', 'Vg_y, [ms/s]', 'Vg_z, [ms/s]'}, ...
+                3,1, ...
+                'vels_errors.png');
+            
+%             obj.plot()
         end  
         
         % Generate trajectory params in SSK
         function obj = generate_telemetry_(obj)
             disp('Generating ideal telemetry ...')
+            linear_vel_r = fopen(obj.settings.path_to_real_linear_vels_in_gsk_file);
+            string_vr = fgetl(linear_vel_r);
+            line_vr = split(string_vr);
+            
+            obj.Vr(1, :) = str2double(line_vr)';
+            
             linear_vel = fopen(obj.settings.path_to_linear_vel_file);
             string_v = fgetl(linear_vel);
             line_v = split(string_v);
+            
+            obj.Vy_r(1) = str2double(line_v);
             
             linear_acc = fopen(obj.settings.path_to_linear_accelerations_file);
             string_a = fgetl(linear_acc);
@@ -798,6 +854,7 @@ classdef Bins
             string_v = fgetl(linear_vel);
             line_v = split(string_v);
             
+            obj.Vy_r(2) = str2double(line_v);
             dV = (str2double(line_v{1}) - obj.Vy_generated(1)) * obj.settings.dt / 60;
             dR = (obj.R_real(2) - obj.R_real(1)) * obj.settings.dt / 60;
             counter = 2;
@@ -807,6 +864,7 @@ classdef Bins
                     string_v = fgetl(linear_vel);
                     line_v = split(string_v);
                     
+                    obj.Vy_r(i) = str2double(line_v);
                     dV = (str2double(line_v{1}) - obj.Vy_generated(i-1)) * obj.settings.dt / 60;
                     dR = (obj.R_real(counter+1) - obj.R_real(counter)) * obj.settings.dt / 60;
                     counter = counter + 1;
@@ -816,13 +874,27 @@ classdef Bins
                 obj.R_generated(i) = obj.R_generated(i-1) + dR;
                 obj.Wx_generated(i) = obj.Wx_generated(1);
                 
+                string_vr = fgetl(linear_vel_r);
+                line_vr = split(string_vr);
+
+                obj.Vr(i, :) = str2double(line_vr)';
+                
                 string_a = fgetl(linear_acc);
                 line_a = split(string_a);
-
                 obj.Ax_generated(i) = str2double(line_a{1}) * obj.settings.sample_rate;
                 obj.Ay_generated(i) = str2double(line_a{2}) * obj.settings.sample_rate;
                 obj.Az_generated(i) = str2double(line_a{3}) * obj.settings.sample_rate;
-            end
+                
+                obj.Sx_g(1) = obj.Sr(1, 1);
+                obj.Sy_g(1) = obj.Sr(1, 2);
+                obj.Sz_g(1) = obj.Sr(1, 3);
+                
+                obj.Sg(1, :) = [obj.Sx_g(1), obj.Sy_g(1), obj.Sz_g(1)];
+            end  
+            
+            obj.Sg(1, 1) = obj.Sr(1, 1);
+            obj.Sg(1, 2) = obj.Sr(1, 2);
+            obj.Sg(1, 3) = obj.Sr(1, 3);
             
             obj.h(1) = obj.R_generated(1);
             disp('Telemetry generated successfully.')

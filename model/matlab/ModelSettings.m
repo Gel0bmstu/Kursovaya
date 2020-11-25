@@ -49,13 +49,13 @@ classdef ModelSettings
         % Sensors settings
         % ----------------------------------------------------------------------------------------
         axel_min_scale_factor = 1.2; 
-        axel_max_scale_factor = 1.4;
+        axel_max_scale_factor = 1.46;
         axel_bias             = 0.03924;      % Accelerometer bias [g]
         axel_sko              = 3.3e-4 * 9.8; % Accelerometer sko  [g]
         
         gyro_min_scale_factor = 1; 
-        gyro_max_scale_factor = 1.1;
-        gyro_bias             = 1e-4;            % Gyro bias [rad/sec]
+        gyro_max_scale_factor = 1.0005;
+        gyro_bias             = 1e-5 / 57.3;        % Gyro bias [rad/sec]
         gyro_sko              = 0.03 / 57.3 / 3600; % Gyro sko  [rad/sec]
 
         % Programm settings
@@ -87,6 +87,7 @@ classdef ModelSettings
         path_to_telemetry_file;              % Path to file which contain real ISS teelemetry
         path_to_linear_vel_file;             % Path to file which contain real ISS linear velocity
         path_to_linear_accelerations_file;   % Path to file which contain real ISS linear accelerations
+        path_to_real_linear_vels_in_gsk_file;% Path to file which contain real ISS linear velocities in GSK
         
         % Progress bar parameters
         % ----------------------------------------------------------------------------------------         
@@ -121,6 +122,7 @@ classdef ModelSettings
             obj.path_to_telemetry_file = './telemetry/russia_one_rev_km.txt';
             obj.path_to_linear_vel_file = './telemetry/linear_vels.txt';
             obj.path_to_linear_accelerations_file = './telemetry/linear_accelerations.txt';
+            obj.path_to_real_linear_vels_in_gsk_file = './telemetry/real_linear_vels_in_gsk.txt';
             
             mkdir(obj.solution_folder_name);
             
@@ -137,9 +139,9 @@ classdef ModelSettings
             obj.Wy_n_0 = 0;
             obj.Wz_n_0 = 0;
 
-            obj.Fx_n_0 = 0;
-            obj.Fy_n_0 = 0;
-            obj.Fz_n_0 = 0;
+            obj.Fx_n_0 = 9.3094e-04;
+            obj.Fy_n_0 = -1.6958e-04;
+            obj.Fz_n_0 = -1.6986e-04;
 
             % Navigtion settings in SSK
             obj.Ax_b_0 = 0;
@@ -154,9 +156,9 @@ classdef ModelSettings
             obj.Wy_b_0 = 0;
             obj.Wz_b_0 = 0;
 
-            obj.Fx_b_0 = 0;
-            obj.Fy_b_0 = 0;
-            obj.Fz_b_0 = 0;
+            obj.Fx_b_0 = 9.3094e-04;
+            obj.Fy_b_0 = -1.6958e-04;
+            obj.Fz_b_0 = -1.6986e-04;
             
             % Progress bar settings
             obj.progress_bar = '[';
