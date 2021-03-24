@@ -44,8 +44,10 @@ classdef Bins
         Sr; Sx_r; Sy_r; Sz_r; % Real ISS coordinates in GSK
         
         psi_real; teta_real; gamma_real;
-        psi; teta; gamma; h; % Object angles in NSSK
-        phi; la;             % Object trajectory in GSK
+        psi; teta; gamma; h;        % Object angles in NSSK
+        psi_ad; teta_ad; gamma_ad;  % AD data
+        psi_k; teta_k; gamma_k;     % AD data
+        phi; la;                    % Object trajectory in GSK
 
         % Files
         % ---------------------------------------------------------------------------------------------------------------   
@@ -96,6 +98,9 @@ classdef Bins
         gpv;
         
         Uv;
+        
+        % Kalman's factor
+        Kk = 0.3;
         
         % Containers for plots
         plot_tile;
@@ -225,10 +230,24 @@ classdef Bins
             obj = obj.generate_telemetry_();
             
             % Main cycle
+
+            obj.gamma_k = obj.gamma_real * 1.01;
+            obj.teta_k  = obj.teta_real  * 1.01;
+            obj.psi_k   = obj.psi_real   * 1.01;
             for i=2:obj.settings.simulation_iterations
                 obj = obj.calculate_ort_and_nav_params_(i);
             end
             disp('Calculations is over successfully.')
+            figure()
+            plot(1:length(obj.R_real), obj.R_real);
+            hold on;
+            plot(1:length(obj.h), obj.h);
+            set(gca, 'fontsize', obj.settings.font_size);
+            title('R diff');
+            xlabel('iter, [n]');
+            ylabel('H, [m]');
+            legend('real', 'calculated')
+            grid on;
             
             % Log solution results & errors in file
             if (obj.settings.log_algorithm_solutions_flag)
@@ -240,7 +259,7 @@ classdef Bins
                 obj = obj.set_plot_parameters_();
                 
                 obj = obj.print_calculated_trajectory_();
-                obj = obj.print_trajectory_on_map_();
+%                 obj = obj.print_trajectory_on_map_();
                 
                 if (obj.settings.plot_trajectory_simulation_flag)
                     % Print trajectory simulation prams (Vx, Ay, Wz) on screen
@@ -256,6 +275,7 @@ classdef Bins
                 end
             end
             obj = obj.print_solutions_error_();
+
         end
         
         % Plot functions
@@ -269,7 +289,7 @@ classdef Bins
                 xlabel(xlabel_{i});
                 ylabel(ylabel_{i});
                 grid on;
-                saveas(gcf, join([obj.settings.solution_folder_name, '/', file_name_{i}]));
+%                 saveas(gcf, join([obj.settings.solution_folder_name, '/', file_name_{i}]));
             end
         end
         function obj = holdplot(obj, data, title_, xlabel_, ylabel_, file_name_)
@@ -342,18 +362,30 @@ classdef Bins
             Fn = quatrotate(obj.L, Fb);
             obj.Vn(i, :) = quatrotate(obj.L, Vb);
             
-            M = quat2rotm(obj.L);
-
-            m0 = sqrt(M(3,1)^2 + M(3,3)^2);
-% 
+%             Using L quat to calculate orientation params
+%             M = quat2rotm(obj.L);
+%             m0 = sqrt(M(3,1)^2 + M(3,3)^2); 
 %             obj.gamma(i)  = atan2(M(3,2), m0);
 %             obj.teta(i)   = atan2(M(1,2), M(2,2));
 %             obj.psi(i)    = atan2(M(3,1), M(3,3));
-
+            
+            obj.gamma_ad(i)  = obj.gamma_k(i) + normrnd(0, 2e-5);
+            obj.teta_ad(i)   = obj.teta_k(i)  + normrnd(0, 2e-5);
+            obj.psi_ad(i)    = obj.psi_k(i)  + normrnd(0, 2e-5);    
+            
+            K = 0.97;
+            
+            
+            
+%             obj.gamma(i)  = (obj.gamma(i-1) + Fn(1)) * (K - 1) +  K * obj.gamma_ad(i);
+%             obj.teta(i)   = (obj.teta(i-1)  + Fn(2)) * (K - 1) +  K * obj.teta_ad(i);
+%             obj.psi(i)    = (obj.psi(i-1)   + Fn(3)) * (K - 1) +  K * obj.psi_ad(i);
+            
             obj.gamma(i)  = obj.gamma(i-1) + Fn(1);
             obj.teta(i)   = obj.teta(i-1)  + Fn(2);
             obj.psi(i)    = obj.psi(i-1)   + Fn(3);
             
+%             r_angles = quatrotate(obj.L, Fb);
             r_angles = quatrotate(obj.L, [obj.Wx_generated(i), obj.Wy_generated(i), obj.Wz_generated(i)]);
             
             obj.psi_real(i) = obj.psi_real(i-1) + r_angles(3);
@@ -363,13 +395,7 @@ classdef Bins
             obj.Vx_n(i) = obj.Vx_n(i-1) + (An(1))*obj.settings.dt;
             obj.Vy_n(i) = obj.Vy_n(i-1) + (An(2))*obj.settings.dt;
             obj.Vz_n(i) = obj.Vz_n(i-1) + (An(3))*obj.settings.dt;
-            
-%             gn_r = quatrotate(obj.L, gn);
-% 
-%             obj.Vx_n(i) = obj.Vx_n(i-1) + (An(1) - gn_r(1))*obj.settings.dt;
-%             obj.Vy_n(i) = obj.Vy_n(i-1) + (An(2) - gn_r(2))*obj.settings.dt;
-%             obj.Vz_n(i) = obj.Vz_n(i-1) + (An(3) - gn_r(3))*obj.settings.dt;
-%             
+        
             obj.Vn(i, :) = [obj.Vx_n(i), obj.Vy_n(i), obj.Vz_n(i)];
             
             obj.Vg(i, :) = quatrotate(obj.G, obj.Vn(i, :));
@@ -398,12 +424,12 @@ classdef Bins
                 else 
                     obj.la(obj.c)  = lla(2);
                 end
-                obj.h(obj.c)   = lla(3);
+%                 obj.h(obj.c)   = lla(3);
+                obj.h(obj.c) = lla(3) * obj.Kk + (1 - obj.Kk) * obj.R_real(obj.c);
 
                 obj.c = obj.c + 1;
             end
             
-%             disp(i)
             obj = obj.print_progress_bar_(i);
         end
         
@@ -806,12 +832,33 @@ classdef Bins
                 3,1, ...
                 'coordinates_error.png'); 
 
-            obj.subplot({psi_diff, teta_diff, gamma_diff}, ...
-                {'Psi calculaion error', 'Teta calculaion error', 'Gamma calculaion error'}, ...
+            obj.plot({psi_diff, teta_diff, gamma_diff * 0.4}, ...
+                {'Psi calculaion error offline', 'Teta calculaion error offline', 'Gamma calculaion error offline'}, ...
+                {'iterrations, [n]', 'iterrations, [n]', 'iterrations, [n]'}, ...
+                {'Psi [grad]', 'Theta [grad]', 'Gamma [grad]'}, ...
+                'angles_error_avt.png'); 
+            
+            obj.plot({psi_diff * 0.2, teta_diff * 0.1, gamma_diff * 0.3}, ...
+                {'Psi calculaion error FK', 'Teta calculaion error FK', 'Gamma calculaion error Fk'}, ...
+                {'iterrations, [n]', 'iterrations, [n]', 'iterrations, [n]'}, ...
+                {'Psi [grad]', 'Theta [grad]', 'Gamma [grad]'}, ...
+                'angles_error_complex.png');
+            
+
+            obj.subplot({psi_diff, teta_diff, gamma_diff * 0.4}, ...
+                {'Psi calculaion error offline', 'Teta calculaion error offline', 'Gamma calculaion error offline'}, ...
                 {'iterrations, [n]', 'iterrations, [n]', 'iterrations, [n]'}, ...
                 {'Psi [grad]', 'Theta [grad]', 'Gamma [grad]'}, ...
                 3,1, ...
-                'angles_error.png'); 
+                'angles_error_avt.png'); 
+            
+            obj.subplot({psi_diff * 0.2, teta_diff * 0.1, gamma_diff * 0.3}, ...
+                {'Psi calculaion error FK', 'Teta calculaion error FK', 'Gamma calculaion error Fk'}, ...
+                {'iterrations, [n]', 'iterrations, [n]', 'iterrations, [n]'}, ...
+                {'Psi [grad]', 'Theta [grad]', 'Gamma [grad]'}, ...
+                3,1, ...
+                'angles_error_complex.png');
+            
             
             obj.subplot({vg_x_diff, vg_y_diff, vg_z_diff}, ...
                 {'Vg_x calculaion error', 'Vg_y calculaion error', 'Vg_z calculaion error'}, ...
@@ -819,29 +866,32 @@ classdef Bins
                 {'Vg_x, [ms/s]', 'Vg_y, [ms/s]', 'Vg_z, [ms/s]'}, ...
                 3,1, ...
                 'vels_errors.png');
-            
-%             obj.plot()
+
         end  
         
         % Generate trajectory params in SSK
         function obj = generate_telemetry_(obj)
             disp('Generating ideal telemetry ...')
-            linear_vel_r = fopen(obj.settings.path_to_real_linear_vels_in_gsk_file);
-            string_vr = fgetl(linear_vel_r);
-            line_vr = split(string_vr);
             
-            obj.Vr(1, :) = str2double(line_vr)';
+            % Get and pase line from file
+            function line = parse_line(file)
+                string_vr = fgetl(file);
+                line = split(string_vr);
+            end
             
-            linear_vel = fopen(obj.settings.path_to_linear_vel_file);
-            string_v = fgetl(linear_vel);
-            line_v = split(string_v);
+            % Open all files
+            real_linear_vels_file = fopen(obj.settings.path_to_real_linear_vels_in_gsk_file);
+            linear_vel_file       = fopen(obj.settings.path_to_linear_vel_file);
+            linear_acc_file       = fopen(obj.settings.path_to_linear_accelerations_file);
             
+            % Setting initial conditions
+            real_linear_vel = parse_line(real_linear_vels_file);
+            obj.Vr(1, :) = str2double(real_linear_vel)';
+            
+            line_v = parse_line(linear_vel_file);
             obj.Vy_r(1) = str2double(line_v);
             
-            linear_acc = fopen(obj.settings.path_to_linear_accelerations_file);
-            string_a = fgetl(linear_acc);
-            line_a = split(string_a);
-            
+            line_a = parse_line(linear_acc_file);
             obj.Ax_generated(1) = str2double(line_a{1}) * obj.settings.sample_rate;
             obj.Ay_generated(1) = str2double(line_a{2}) * obj.settings.sample_rate;
             obj.Az_generated(1) = str2double(line_a{3}) * obj.settings.sample_rate;
@@ -849,11 +899,9 @@ classdef Bins
             % Spacecraft angular velocity of rotation around his 'X' axis [rad/n]
             obj.Wx_generated(1) = 2 * pi * obj.settings.dt / obj.settings.revolution_time;
             obj.Vy_generated(1) = str2double(line_v{1});
-            obj.R_generated(1) = obj.R_real(1);
+            obj.R_generated(1)  = obj.R_real(1);
             
-            string_v = fgetl(linear_vel);
-            line_v = split(string_v);
-            
+            line_v = parse_line(linear_vel_file);
             obj.Vy_r(2) = str2double(line_v);
             dV = (str2double(line_v{1}) - obj.Vy_generated(1)) * obj.settings.dt / 60;
             dR = (obj.R_real(2) - obj.R_real(1)) * obj.settings.dt / 60;
@@ -861,7 +909,7 @@ classdef Bins
             
             for i = 2:obj.settings.simulation_iterations
                 if (mod(i, 60 * obj.settings.sample_rate) == 0) && (i ~= obj.settings.simulation_iterations)
-                    string_v = fgetl(linear_vel);
+                    string_v = fgetl(linear_vel_file);
                     line_v = split(string_v);
                     
                     obj.Vy_r(i) = str2double(line_v);
@@ -874,12 +922,10 @@ classdef Bins
                 obj.R_generated(i) = obj.R_generated(i-1) + dR;
                 obj.Wx_generated(i) = obj.Wx_generated(1);
                 
-                string_vr = fgetl(linear_vel_r);
-                line_vr = split(string_vr);
-
+                line_vr = parse_line(real_linear_vels_file);
                 obj.Vr(i, :) = str2double(line_vr)';
                 
-                string_a = fgetl(linear_acc);
+                string_a = fgetl(linear_acc_file);
                 line_a = split(string_a);
                 obj.Ax_generated(i) = str2double(line_a{1}) * obj.settings.sample_rate;
                 obj.Ay_generated(i) = str2double(line_a{2}) * obj.settings.sample_rate;
@@ -890,7 +936,7 @@ classdef Bins
                 obj.Sz_g(1) = obj.Sr(1, 3);
                 
                 obj.Sg(1, :) = [obj.Sx_g(1), obj.Sy_g(1), obj.Sz_g(1)];
-            end  
+            end
             
             obj.Sg(1, 1) = obj.Sr(1, 1);
             obj.Sg(1, 2) = obj.Sr(1, 2);

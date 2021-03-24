@@ -2,7 +2,7 @@
 
 settings = ModelSettings(97*60, 1);
 disp('Algorithm setting:');
-settings = settings.set_calibration_mode_flag(1);            % Enable/Disable sensitive elements
+settings = settings.set_calibration_mode_flag(1);            % Enable/Disable calibrations of sensitive elements
 settings = settings.set_debug_mode_flag(1);                  % Poka ne nujen :(
 settings = settings.set_display_solutions_flag(1);           % Plot solution on screen
 settings = settings.set_subplot_print_flag(0);               % Plot solution as one subplot on screen, if flag = true
